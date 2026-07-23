@@ -22,42 +22,35 @@ Avant tout code, six règles d'architecture sont **figées** :
 | [Principes Immutables](./docs/AOTC-Principes-Architecture-Immutables.md) | Règles non négociables |
 | [Architecture Fonctionnelle et Métier](./docs/AOTC-Architecture-Fonctionnelle-et-Metier.md) | Flux métier, liquidité, risque |
 | [Interfaces & Contrats](./docs/AOTC-Interfaces-Moteurs-et-Contrats-de-Donnees.md) | Schémas inter-moteurs |
+| [Lot 1 — Scénario E2E](./docs/AOTC-Lot1-Scenario-E2E.md) | Périmètre unique (12 étapes) + discipline PR |
 
 ## Monorepo (Lot 1 — fondations)
 
 ```
 packages/
-  core/           # Domaine pur + ports (aucune infra)
-  contracts/      # Schémas Zod figés
-  message-bus/    # Adapters bus / leadership (in-memory → Redis)
+  core/                 # Domaine pur + ports (aucune infra)
+  contracts/            # Schémas Zod figés
+  message-bus/          # Adapters bus / leadership (in-memory → Redis)
+  simulation-journal/   # Chronologie lisible des décisions (MVP démo)
 engines/
-  trading/        # Matching (repository + bus uniquement)
-  risk/
-  pricing/
-  liquidity/
-  treasury/
-  settlement/
-  sor/
-  decision/       # Intelligence (no-op MVP)
-  monitoring/
-  partner/
-  market-data/
-apps/             # Next.js / API Gateway (à venir)
+  trading/ risk/ pricing/ liquidity/ treasury/
+  settlement/ sor/ decision/ monitoring/ partner/ market-data/
+apps/                   # Next.js / API Gateway (à venir)
 ```
 
-## Démarrage
+## Démo Lot 1 (journal de simulation)
 
 ```bash
 pnpm install
 pnpm build
-pnpm test
+pnpm --filter @aotc/simulation-journal demo
 ```
 
-## Lot 1 — suite prévue
+Affiche la chronologie Risk → SOR → Trading → Liquidity → Settlement (parcours sandbox).
 
-- Schéma Supabase + RLS multi-tenant SGI
-- Auth + MFA
-- Adapter Redis Streams
-- Market data simulée + parcours `inscription → KYC → dépôt simulé → premier ordre` (`SGI_PARTNER` / `sandbox`)
+## Lot 1 — suite (une PR = une feature)
 
-Toute évolution majeure des frontières moteurs / contrats passe par une **nouvelle proposition d'architecture**.
+Voir la roadmap dans [`docs/AOTC-Lot1-Scenario-E2E.md`](./docs/AOTC-Lot1-Scenario-E2E.md) :
+Auth+MFA → KYC → Market Data → Dépôt simulé → Risk → SOR → Trading → Settlement → Liquidity → Portefeuille/Audit.
+
+Hors scope pour l'instant (interfaces / stubs) : AI, monitoring avancé, treasury complet, partner avancé, pricing dynamique, API publique, Mobile Money réel, SGI réelle, flux BRVM réel.

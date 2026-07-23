@@ -16,3 +16,4 @@ export * from "./marketdata.js";
 export * from "./partner.js";
 export * from "./monitoring.js";
 export * from "./decision.js";
+export * from "./simulation-journal.js";

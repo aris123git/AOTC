@@ -14,4 +14,5 @@ export * from "./ports/message-bus.js";
 export * from "./ports/repository.js";
 export * from "./ports/leadership.js";
 export * from "./ports/decision.js";
+export * from "./ports/simulation-journal.js";
 export * from "./engines/engine.js";

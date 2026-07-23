@@ -151,6 +151,17 @@ Si une de ces cases est cochée « non » → **proposition d'architecture requi
 
 ---
 
+## Discipline de livraison (Lot 1+)
+
+**Une Pull Request = un moteur ou une fonctionnalité métier complète.**
+
+Exemples : Auth+MFA · KYC · Market Data · Risk · SOR · Trading · Settlement · Liquidity · Simulation Journal.
+
+Interdit : mega-PR touchant plusieurs moteurs « pour avancer plus vite ».
+Périmètre Lot 1 : [Scénario E2E](./AOTC-Lot1-Scenario-E2E.md).
+
+---
+
 ## Documents liés
 
 1. [Architecture Fonctionnelle et Métier](./AOTC-Architecture-Fonctionnelle-et-Metier.md)

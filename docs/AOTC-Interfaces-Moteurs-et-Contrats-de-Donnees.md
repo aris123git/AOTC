@@ -82,7 +82,7 @@ aotc.treasury.reserved       aotc.treasury.released
 aotc.settlement.instructed   aotc.settlement.confirmed   aotc.settlement.failed
 aotc.marketdata.tick         aotc.marketdata.candle      aotc.marketdata.corporate_action
 aotc.partner.stats           aotc.monitoring.alert
-aotc.decision.signal
+aotc.decision.signal         aotc.simulation.journal
 ```
 
 ---

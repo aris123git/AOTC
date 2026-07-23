@@ -25,6 +25,7 @@ export const TOPICS = {
   PARTNER_STATS: "aotc.partner.stats",
   MONITORING_ALERT: "aotc.monitoring.alert",
   DECISION_SIGNAL: "aotc.decision.signal",
+  SIMULATION_JOURNAL: "aotc.simulation.journal",
 } as const;
 
 export type Topic = (typeof TOPICS)[keyof typeof TOPICS];
