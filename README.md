@@ -40,13 +40,20 @@ apps/                   # Next.js / API Gateway (à venir)
 
 ## Démo Lot 1 (journal de simulation)
 
+**UI web**
+
 ```bash
-pnpm install
-pnpm build
-pnpm --filter @aotc/simulation-journal demo
+pnpm install && pnpm build
+pnpm --filter @aotc/journal-ui start
+# → http://localhost:8787
+# → http://localhost:8787/standalone.html  (page autonome)
 ```
 
-Affiche la chronologie Risk → SOR → Trading → Liquidity → Settlement (parcours sandbox).
+**CLI**
+
+```bash
+pnpm --filter @aotc/simulation-journal demo
+```
 
 ## Lot 1 — suite (une PR = une feature)
 

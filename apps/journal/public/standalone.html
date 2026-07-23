@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AOTC — Journal de simulation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  --ink: #10241c;
+  --ink-soft: #3a5348;
+  --brand: #0b3d2e;
+  --accent: #c9a227;
+  --accent-deep: #9a7a12;
+  --surface: rgba(255, 255, 255, 0.55);
+  --line: rgba(11, 61, 46, 0.14);
+  --ok: #1f7a4c;
+  --engine: #0f5c6b;
+  --audit: #5a4a2a;
+  --danger: #9b2c2c;
+  --font-display: "Bricolage Grotesque", Georgia, serif;
+  --font-body: "Manrope", "Segoe UI", sans-serif;
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.45;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(201, 162, 39, 0.22), transparent 55%),
+    radial-gradient(900px 600px at 90% 8%, rgba(15, 92, 107, 0.18), transparent 50%),
+    linear-gradient(165deg, #e7f1ec 0%, #d7e6df 42%, #cfe0e4 100%);
+}
+
+.page {
+  position: relative;
+  isolation: isolate;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.1rem, 3vw, 2rem) 4rem;
+}
+
+.atmosphere {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 18px,
+    rgba(11, 61, 46, 0.015) 18px,
+    rgba(11, 61, 46, 0.015) 19px
+  );
+  animation: drift 28s linear infinite;
+}
+
+@keyframes drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(40px);
+  }
+}
+
+.hero {
+  margin-bottom: 2.75rem;
+  animation: rise 700ms ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brand {
+  margin: 0 0 0.65rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 8vw, 4.4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  color: var(--brand);
+}
+
+.hero h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.lede {
+  margin: 0.85rem 0 0;
+  max-width: 34rem;
+  color: var(--ink-soft);
+  font-size: 1.02rem;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  margin-top: 1.6rem;
+}
+
+.cta {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  background: var(--brand);
+  color: #f4faf6;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.35rem;
+  border-radius: 0.35rem;
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 10px 24px rgba(11, 61, 46, 0.18);
+}
+
+.cta:hover:not(:disabled) {
+  background: #0f5240;
+  transform: translateY(-1px);
+}
+
+.cta:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.meta {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.stage {
+  position: relative;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border-left: 2px solid var(--line);
+  margin-left: 0.35rem;
+}
+
+.event {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  gap: 0.85rem;
+  align-items: baseline;
+  padding: 0.72rem 0 0.72rem 1.25rem;
+  position: relative;
+  opacity: 0;
+  animation: enter 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.event::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 1.15rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.2);
+}
+
+.event time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.event span {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.tone-success span {
+  color: var(--ok);
+}
+
+.tone-engine span {
+  color: var(--engine);
+}
+
+.tone-audit span {
+  color: var(--audit);
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ids {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+  animation: rise 500ms ease both;
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .event {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
+
+  .cta { border: none; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="atmosphere" aria-hidden="true"></div>
+    <header class="hero">
+      <p class="brand">AOTC</p>
+      <h1>Journal de simulation</h1>
+      <p class="lede">Chronologie lisible du parcours Lot&nbsp;1 — de l’inscription à l’instruction de règlement T+3.</p>
+      <div class="cta-row">
+        <button type="button" class="cta" id="replay">Rejouer le scénario</button>
+        <p class="meta" id="meta"></p>
+      </div>
+    </header>
+    <main class="stage">
+      <ol class="timeline" id="timeline" aria-live="polite"></ol>
+      <footer class="ids" id="ids" hidden></footer>
+    </main>
+  </div>
+  <script>
+    const SAMPLE = {"correlation_id": "64109df2-bf2a-4bfe-ab06-b331f9ec8e8b", "timeline": ["20:54:39  Investisseur : compte créé", "20:54:39  KYC : pièces soumises", "20:54:39  SGI : KYC validé", "20:54:39  Dépôt simulé : 50 000 XOF", "20:54:39  Actions disponibles : SNTS @ 15000 (DEMO)", "20:54:39  Ordre reçu : ACHAT 100 SNTS @ 15000", "20:54:39  Risk Engine : VALIDÉ", "20:54:39  Treasury : fonds réservés (1500000)", "20:54:39  Smart Order Router : Book interne", "20:54:39  Trading Engine : ordre reçu et carnet mis à jour", "20:54:39  Carnet d'ordres : 1 niveau(x) bid, 0 ask", "20:54:39  Liquidity Engine : Intervention approuvée (SGI_PARTNER)", "20:54:39  Trading Engine : Exécuté 100 @ 15000", "20:54:39  Settlement Engine : Instruction T+3 créée", "20:54:39  Portefeuille mis à jour : +100 SNTS, cash=3500000", "20:54:39  Audit : parcours journalisé (correlation_id conservé)"], "order_id": "d78f9e69-19fd-4521-8110-3d301281e421", "trade_id": "10cb913a-44b0-4e1c-9714-547a34fbb107", "portfolio": {"cash_available": 3500000, "holdings_qty": 100}};
+
+    function nowTimeline(base) {
+      const stamp = new Date().toISOString().slice(11, 19);
+      return {
+        ...base,
+        correlation_id: crypto.randomUUID(),
+        order_id: crypto.randomUUID(),
+        trade_id: crypto.randomUUID(),
+        timeline: base.timeline.map((line) => line.replace(/^\d{2}:\d{2}:\d{2}/, stamp)),
+      };
+    }
+
+    function tone(text) {
+      if (/VALIDÉ|approuvée|Exécuté|mis à jour|créé|créée|validé/i.test(text)) return 'success';
+      if (/Engine|Router|Treasury|Settlement|Liquidity|Risk|Trading|SOR/i.test(text)) return 'engine';
+      if (/Audit/i.test(text)) return 'audit';
+      return 'neutral';
+    }
+
+    function parse(line) {
+      const m = line.match(/^(\d{2}:\d{2}:\d{2})\s+(.*)$/);
+      return { time: m ? m[1] : '', text: m ? m[2] : line };
+    }
+
+    let timer;
+    function play(result) {
+      clearInterval(timer);
+      const tl = document.getElementById('timeline');
+      const ids = document.getElementById('ids');
+      const meta = document.getElementById('meta');
+      tl.innerHTML = '';
+      ids.hidden = true;
+      meta.textContent = `sandbox · ${result.portfolio.holdings_qty} SNTS · cash ${(result.portfolio.cash_available / 100).toLocaleString('fr-FR')} XOF`;
+      let i = 0;
+      timer = setInterval(() => {
+        if (i >= result.timeline.length) {
+          clearInterval(timer);
+          ids.hidden = false;
+          ids.innerHTML = `<span>correlation · ${result.correlation_id}</span><span>ordre · ${result.order_id}</span><span>trade · ${result.trade_id}</span>`;
+          return;
+        }
+        const item = parse(result.timeline[i]);
+        const li = document.createElement('li');
+        li.className = `event tone-${tone(item.text)}`;
+        li.style.animationDelay = `${Math.min(i * 40, 400)}ms`;
+        li.innerHTML = `<time>${item.time}</time><span>${item.text}</span>`;
+        tl.appendChild(li);
+        i += 1;
+      }, 180);
+    }
+
+    document.getElementById('replay').addEventListener('click', () => play(nowTimeline(SAMPLE)));
+    play(nowTimeline(SAMPLE));
+  </script>
+</body>
+</html>
