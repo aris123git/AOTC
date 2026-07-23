@@ -1,5 +1,16 @@
 import { useEffect, useState, useTransition } from "react";
 
+type Screen =
+  | "welcome"
+  | "signup"
+  | "kyc"
+  | "deposit"
+  | "market"
+  | "order"
+  | "executing"
+  | "portfolio"
+  | "activity";
+
 type DemoResult = {
   correlation_id: string;
   timeline: string[];
@@ -13,6 +24,21 @@ type TimelineItem = {
   text: string;
   tone: "neutral" | "success" | "engine" | "audit";
 };
+
+const INSTRUMENT = {
+  symbol: "SNTS",
+  name: "Sonatel",
+  exchange: "DEMO",
+  priceMinor: 15_000,
+  qty: 100,
+};
+
+function xof(minor: number): string {
+  return (minor / 100).toLocaleString("fr-FR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
 
 function parseLine(line: string): TimelineItem {
   const m = line.match(/^(\d{2}:\d{2}:\d{2})\s+(.*)$/);
@@ -30,13 +56,24 @@ function parseLine(line: string): TimelineItem {
 }
 
 export function App() {
+  const [screen, setScreen] = useState<Screen>("welcome");
+  const [name, setName] = useState("Aïcha Diallo");
+  const [email, setEmail] = useState("aicha@exemple.sn");
+  const [kycReady, setKycReady] = useState(false);
+  const [depositDone, setDepositDone] = useState(false);
+  const [cashMinor, setCashMinor] = useState(0);
+  const [holdings, setHoldings] = useState(0);
   const [result, setResult] = useState<DemoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(0);
   const [pending, startTransition] = useTransition();
   const [running, setRunning] = useState(false);
 
-  async function runDemo() {
+  const onboarded = depositDone || holdings > 0;
+  const orderCost = INSTRUMENT.qty * INSTRUMENT.priceMinor;
+
+  async function executeOrder() {
+    setScreen("executing");
     setRunning(true);
     setError(null);
     setVisibleCount(0);
@@ -44,88 +81,348 @@ export function App() {
       const res = await fetch("/api/demo", { method: "POST" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as DemoResult;
-      startTransition(() => setResult(data));
+      startTransition(() => {
+        setResult(data);
+        setCashMinor(data.portfolio.cash_available);
+        setHoldings(data.portfolio.holdings_qty);
+        setDepositDone(true);
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec de la démo");
-      setResult(null);
+      setError(e instanceof Error ? e.message : "Échec de l’ordre");
+      setScreen("order");
     } finally {
       setRunning(false);
     }
   }
 
   useEffect(() => {
-    void runDemo();
-  }, []);
-
-  useEffect(() => {
-    if (!result) return;
+    if (!result || screen !== "executing") return;
     setVisibleCount(0);
     let i = 0;
     const id = window.setInterval(() => {
       i += 1;
       setVisibleCount(i);
-      if (i >= result.timeline.length) window.clearInterval(id);
-    }, 180);
+      if (i >= result.timeline.length) {
+        window.clearInterval(id);
+        window.setTimeout(() => setScreen("portfolio"), 450);
+      }
+    }, 140);
     return () => window.clearInterval(id);
-  }, [result]);
+  }, [result, screen]);
+
+  function resetDemo() {
+    setScreen("welcome");
+    setKycReady(false);
+    setDepositDone(false);
+    setCashMinor(0);
+    setHoldings(0);
+    setResult(null);
+    setError(null);
+    setVisibleCount(0);
+  }
 
   const items = (result?.timeline ?? []).map(parseLine);
   const shown = items.slice(0, visibleCount);
 
   return (
-    <div className="page">
+    <div className="app">
       <div className="atmosphere" aria-hidden="true" />
 
-      <header className="hero">
-        <p className="brand">AOTC</p>
-        <h1>Journal de simulation</h1>
-        <p className="lede">
-          Chronologie lisible du parcours Lot&nbsp;1 — de l’inscription à
-          l’instruction de règlement T+3.
-        </p>
-        <div className="cta-row">
-          <button
-            type="button"
-            className="cta"
-            onClick={() => void runDemo()}
-            disabled={running || pending}
-          >
-            {running ? "Exécution…" : "Rejouer le scénario"}
+      {onboarded && screen !== "welcome" && screen !== "signup" && screen !== "kyc" && (
+        <nav className="topnav" aria-label="Navigation principale">
+          <button type="button" className="nav-brand" onClick={() => setScreen("market")}>
+            AOTC
           </button>
-          {result && (
-            <p className="meta">
-              sandbox · {result.portfolio.holdings_qty} SNTS · cash{" "}
-              {(result.portfolio.cash_available / 100).toLocaleString("fr-FR")}{" "}
-              XOF
-            </p>
-          )}
-        </div>
-      </header>
-
-      <main className="stage">
-        {error && <p className="error">{error}</p>}
-
-        <ol className="timeline" aria-live="polite">
-          {shown.map((item, idx) => (
-            <li
-              key={`${item.time}-${idx}`}
-              className={`event tone-${item.tone}`}
-              style={{ animationDelay: `${Math.min(idx * 40, 400)}ms` }}
+          <div className="nav-links">
+            <button
+              type="button"
+              className={screen === "market" || screen === "order" ? "active" : ""}
+              onClick={() => setScreen("market")}
             >
-              <time dateTime={item.time}>{item.time}</time>
-              <span>{item.text}</span>
-            </li>
-          ))}
-        </ol>
+              Marché
+            </button>
+            <button
+              type="button"
+              className={screen === "portfolio" ? "active" : ""}
+              onClick={() => setScreen("portfolio")}
+            >
+              Portefeuille
+            </button>
+            <button
+              type="button"
+              className={screen === "activity" || screen === "executing" ? "active" : ""}
+              onClick={() => setScreen("activity")}
+            >
+              Activité
+            </button>
+          </div>
+        </nav>
+      )}
 
-        {result && visibleCount >= items.length && (
-          <footer className="ids">
-            <span>correlation · {result.correlation_id}</span>
-            <span>ordre · {result.order_id}</span>
-            {result.trade_id && <span>trade · {result.trade_id}</span>}
-          </footer>
-        )}
-      </main>
+      {screen === "welcome" && (
+        <section className="screen welcome">
+          <div className="hero-plane" aria-hidden="true" />
+          <div className="welcome-copy">
+            <p className="brand">AOTC</p>
+            <h1>Investissez sur les marchés ouest-africains</h1>
+            <p className="lede">
+              Compte, KYC, dépôt et premier ordre — en mode sandbox, comme en production.
+            </p>
+            <div className="cta-row">
+              <button type="button" className="cta" onClick={() => setScreen("signup")}>
+                Ouvrir mon compte
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {screen === "signup" && (
+        <section className="screen form-screen">
+          <p className="eyebrow">Étape 1 · Compte</p>
+          <h1>Créer votre profil investisseur</h1>
+          <p className="lede">Identifiants sandbox — aucune donnée réelle n’est envoyée.</p>
+          <form
+            className="stack-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setScreen("kyc");
+            }}
+          >
+            <label>
+              Nom complet
+              <input value={name} onChange={(e) => setName(e.target.value)} required />
+            </label>
+            <label>
+              E-mail
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+            <button type="submit" className="cta">
+              Continuer
+            </button>
+          </form>
+        </section>
+      )}
+
+      {screen === "kyc" && (
+        <section className="screen form-screen">
+          <p className="eyebrow">Étape 2 · KYC</p>
+          <h1>Vérification d’identité</h1>
+          <p className="lede">
+            Soumettez vos pièces. La SGI partenaire valide le dossier en sandbox.
+          </p>
+          <div className="kyc-panel">
+            <button
+              type="button"
+              className={`doc-slot ${kycReady ? "ready" : ""}`}
+              onClick={() => setKycReady(true)}
+            >
+              {kycReady ? "Pièce d’identité · prête" : "Ajouter une pièce d’identité"}
+            </button>
+            {kycReady && (
+              <p className="status-ok fade-in">SGI · KYC validé pour {name}</p>
+            )}
+          </div>
+          <div className="cta-row">
+            <button
+              type="button"
+              className="cta"
+              disabled={!kycReady}
+              onClick={() => setScreen("deposit")}
+            >
+              Accéder au dépôt
+            </button>
+          </div>
+        </section>
+      )}
+
+      {screen === "deposit" && (
+        <section className="screen form-screen">
+          <p className="eyebrow">Étape 3 · Liquidités</p>
+          <h1>Dépôt simulé</h1>
+          <p className="lede">Crédit sandbox Mobile Money — sans mouvement réel de fonds.</p>
+          <div className="amount-hero">
+            <span className="amount-value">{xof(5_000_000)}</span>
+            <span className="amount-unit">XOF</span>
+          </div>
+          <div className="cta-row">
+            <button
+              type="button"
+              className="cta"
+              onClick={() => {
+                setCashMinor(5_000_000);
+                setDepositDone(true);
+                setScreen("market");
+              }}
+            >
+              Déposer {xof(5_000_000)} XOF
+            </button>
+          </div>
+        </section>
+      )}
+
+      {screen === "market" && (
+        <section className="screen market-screen">
+          <header className="section-head">
+            <p className="eyebrow">Marché · {INSTRUMENT.exchange}</p>
+            <h1>Actions disponibles</h1>
+            <p className="lede">Catalogue simulé Lot&nbsp;1 — un titre pour prouver le parcours.</p>
+          </header>
+          <button type="button" className="instrument-row" onClick={() => setScreen("order")}>
+            <div>
+              <strong>{INSTRUMENT.symbol}</strong>
+              <span>{INSTRUMENT.name}</span>
+            </div>
+            <div className="instrument-price">
+              <strong>{xof(INSTRUMENT.priceMinor)}</strong>
+              <span>XOF</span>
+            </div>
+          </button>
+          <p className="cash-hint">
+            Cash disponible · <strong>{xof(cashMinor)} XOF</strong>
+          </p>
+        </section>
+      )}
+
+      {screen === "order" && (
+        <section className="screen form-screen">
+          <p className="eyebrow">Ordre d’achat</p>
+          <h1>
+            {INSTRUMENT.symbol} · {INSTRUMENT.name}
+          </h1>
+          <p className="lede">
+            Achat limite · {INSTRUMENT.qty} titres @ {xof(INSTRUMENT.priceMinor)} XOF
+          </p>
+          <dl className="order-summary">
+            <div>
+              <dt>Quantité</dt>
+              <dd>{INSTRUMENT.qty}</dd>
+            </div>
+            <div>
+              <dt>Prix limite</dt>
+              <dd>{xof(INSTRUMENT.priceMinor)} XOF</dd>
+            </div>
+            <div>
+              <dt>Montant estimé</dt>
+              <dd>{xof(orderCost)} XOF</dd>
+            </div>
+          </dl>
+          {error && <p className="error">{error}</p>}
+          <div className="cta-row">
+            <button
+              type="button"
+              className="cta"
+              disabled={running || pending}
+              onClick={() => void executeOrder()}
+            >
+              {running ? "Envoi…" : "Passer l’ordre"}
+            </button>
+            <button type="button" className="cta-ghost" onClick={() => setScreen("market")}>
+              Retour
+            </button>
+          </div>
+        </section>
+      )}
+
+      {screen === "executing" && (
+        <section className="screen executing-screen">
+          <p className="eyebrow">Exécution</p>
+          <h1>Votre ordre traverse les moteurs</h1>
+          <p className="lede">Risk → Treasury → SOR → Trading → Liquidity → Settlement</p>
+          <ol className="timeline" aria-live="polite">
+            {shown.map((item, idx) => (
+              <li
+                key={`${item.time}-${idx}`}
+                className={`event tone-${item.tone}`}
+                style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}
+              >
+                <time dateTime={item.time}>{item.time}</time>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {screen === "portfolio" && (
+        <section className="screen portfolio-screen">
+          <header className="section-head">
+            <p className="eyebrow">Portefeuille · sandbox</p>
+            <h1>Bonjour, {name.split(" ")[0]}</h1>
+            <p className="lede">Positions après votre premier ordre Lot&nbsp;1.</p>
+          </header>
+
+          <div className="balance-block">
+            <p className="balance-label">Cash disponible</p>
+            <p className="balance-value">
+              {xof(cashMinor)} <span>XOF</span>
+            </p>
+          </div>
+
+          <div className="holding-block">
+            <p className="holding-label">Position</p>
+            {holdings > 0 ? (
+              <button type="button" className="instrument-row" onClick={() => setScreen("activity")}>
+                <div>
+                  <strong>{INSTRUMENT.symbol}</strong>
+                  <span>
+                    {holdings} titres · {INSTRUMENT.name}
+                  </span>
+                </div>
+                <div className="instrument-price">
+                  <strong>{xof(holdings * INSTRUMENT.priceMinor)}</strong>
+                  <span>valeur</span>
+                </div>
+              </button>
+            ) : (
+              <p className="lede">Aucune position — passez un ordre sur le marché.</p>
+            )}
+          </div>
+
+          <div className="cta-row">
+            <button type="button" className="cta" onClick={() => setScreen("market")}>
+              Voir le marché
+            </button>
+            <button type="button" className="cta-ghost" onClick={resetDemo}>
+              Recommencer la démo
+            </button>
+          </div>
+        </section>
+      )}
+
+      {screen === "activity" && (
+        <section className="screen activity-screen">
+          <header className="section-head">
+            <p className="eyebrow">Activité & audit</p>
+            <h1>Journal de simulation</h1>
+            <p className="lede">Chronologie complète du parcours — pour vous et vos partenaires.</p>
+          </header>
+          {result ? (
+            <>
+              <ol className="timeline">
+                {items.map((item, idx) => (
+                  <li key={`${item.time}-${idx}`} className={`event tone-${item.tone} visible`}>
+                    <time dateTime={item.time}>{item.time}</time>
+                    <span>{item.text}</span>
+                  </li>
+                ))}
+              </ol>
+              <footer className="ids">
+                <span>correlation · {result.correlation_id}</span>
+                <span>ordre · {result.order_id}</span>
+                {result.trade_id && <span>trade · {result.trade_id}</span>}
+              </footer>
+            </>
+          ) : (
+            <p className="lede">Passez un ordre pour remplir le journal.</p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

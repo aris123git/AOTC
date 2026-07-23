@@ -38,18 +38,17 @@ engines/
 apps/                   # Next.js / API Gateway (à venir)
 ```
 
-## Démo Lot 1 (journal de simulation)
+## Démo Lot 1 (app investisseur)
 
-**UI web**
+Parcours produit sandbox : **compte → KYC → dépôt → marché → ordre → portefeuille** (le journal d’activité reste accessible dans l’app).
 
 ```bash
 pnpm install && pnpm build
 pnpm --filter @aotc/journal-ui start
 # → http://localhost:8787
-# → http://localhost:8787/standalone.html  (page autonome)
 ```
 
-**CLI**
+**CLI** (chronologie seule)
 
 ```bash
 pnpm --filter @aotc/simulation-journal demo

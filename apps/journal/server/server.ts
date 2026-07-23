@@ -29,5 +29,5 @@ if (existsSync(staticDir)) {
 }
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`AOTC Journal UI → http://0.0.0.0:${port}`);
+  console.log(`AOTC App → http://0.0.0.0:${port}`);
 });
