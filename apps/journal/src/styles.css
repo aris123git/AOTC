@@ -45,7 +45,7 @@ body {
 .app {
   position: relative;
   isolation: isolate;
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   min-height: 100vh;
   padding: 0 clamp(1.1rem, 3vw, 2rem) 3.5rem;
@@ -581,6 +581,377 @@ body {
   font-weight: 600;
 }
 
+.flash {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0;
+  padding: 0.7rem 0.9rem;
+  background: rgba(31, 122, 76, 0.1);
+  color: var(--ok);
+  font-weight: 600;
+  font-size: 0.92rem;
+  animation: rise 350ms ease both;
+}
+
+.flash button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.error.banner {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.9rem;
+  background: rgba(155, 44, 44, 0.08);
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.muted.tiny {
+  font-size: 0.82rem;
+}
+
+.up {
+  color: var(--ok);
+}
+
+.down {
+  color: var(--danger);
+}
+
+.soft {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.nav-links {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cta-ghost.light {
+  color: #f3f8f5;
+  border-color: rgba(243, 248, 245, 0.35);
+}
+
+.cta-ghost.light:hover {
+  background: rgba(255, 255, 245, 0.08);
+}
+
+.cta-ghost.danger {
+  color: var(--danger);
+  border-color: rgba(155, 44, 44, 0.28);
+}
+
+.cash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 1.75rem;
+}
+
+.cash-grid h2,
+.instrument-screen h2,
+.portfolio-screen h2,
+.admin-screen h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.chip.active,
+.chip:hover {
+  color: var(--brand);
+  border-color: rgba(11, 61, 46, 0.35);
+  background: rgba(11, 61, 46, 0.06);
+}
+
+.inline-field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.85rem 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.inline-field input {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0.35rem;
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+  color: var(--ink);
+}
+
+.market-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.75rem;
+}
+
+.instrument-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.price-lg {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--brand);
+}
+
+.price-lg span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-left: 0.25rem;
+}
+
+.spark {
+  width: 140px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.split-panels {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.book {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.book-label {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.book-row {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.asks .book-row span:first-child {
+  color: var(--danger);
+}
+
+.bids .book-row span:first-child {
+  color: var(--ok);
+}
+
+.side-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.side-toggle.compact {
+  margin-bottom: 0.25rem;
+}
+
+.side-toggle button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.65rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+.side-toggle button.active.buy {
+  background: rgba(31, 122, 76, 0.12);
+  color: var(--ok);
+  border-color: rgba(31, 122, 76, 0.35);
+}
+
+.side-toggle button.active.sell {
+  background: rgba(155, 44, 44, 0.1);
+  color: var(--danger);
+  border-color: rgba(155, 44, 44, 0.3);
+}
+
+.side-toggle button.active:not(.buy):not(.sell) {
+  background: rgba(11, 61, 46, 0.08);
+  color: var(--brand);
+}
+
+.holdings,
+.data-list,
+.edu-list,
+.health-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+
+.holdings li,
+.data-list li,
+.health-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.holdings li span,
+.data-list li span {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.data-list li {
+  align-items: flex-start;
+}
+
+.data-list li > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.edu-item {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 1rem 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.edu-item strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.edu-item span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+}
+
+.edu-body {
+  padding: 0 0 1rem;
+  color: var(--ink-soft);
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1.25rem 0 1.75rem;
+}
+
+.stat-label {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.stat-value {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.pill {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ok);
+}
+
+.pill.degraded,
+.pill.down {
+  color: var(--danger);
+}
+
+.tone-danger span {
+  color: var(--danger);
+}
+
+@media (max-width: 800px) {
+  .cash-grid,
+  .split-panels,
+  .ops-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 560px) {
   .event {
     grid-template-columns: 1fr;
@@ -589,10 +960,15 @@ body {
 
   .nav-links button {
     padding: 0.4rem 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .welcome-copy {
     padding-top: 38vh;
+  }
+
+  .instrument-hero {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

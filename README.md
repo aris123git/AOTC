@@ -24,23 +24,26 @@ Avant tout code, six règles d'architecture sont **figées** :
 | [Interfaces & Contrats](./docs/AOTC-Interfaces-Moteurs-et-Contrats-de-Donnees.md) | Schémas inter-moteurs |
 | [Lot 1 — Scénario E2E](./docs/AOTC-Lot1-Scenario-E2E.md) | Périmètre unique (12 étapes) + discipline PR |
 
-## Monorepo (Lot 1 — fondations)
+## Monorepo
 
 ```
 packages/
-  core/                 # Domaine pur + ports (aucune infra)
+  core/                 # Domaine pur + ports
   contracts/            # Schémas Zod figés
-  message-bus/          # Adapters bus / leadership (in-memory → Redis)
-  simulation-journal/   # Chronologie lisible des décisions (MVP démo)
+  message-bus/          # Bus / leadership in-memory
+  simulation-journal/   # Chronologie des décisions
+  sandbox-platform/     # Session exchange sandbox (orchestration)
 engines/
   trading/ risk/ pricing/ liquidity/ treasury/
   settlement/ sor/ decision/ monitoring/ partner/ market-data/
-apps/                   # Next.js / API Gateway (à venir)
+apps/journal/           # App investisseur + API + NOC
 ```
 
-## Démo Lot 1 (app investisseur)
+## App sandbox (paiements démo)
 
-Parcours produit sandbox : **compte → KYC → dépôt → marché → ordre → portefeuille** (le journal d’activité reste accessible dans l’app).
+**Tout est en mode `sandbox`** : dépôt / retrait Mobile Money **simulés**, aucun PSP réel, aucune instruction RL réelle.
+
+Parcours : **compte → KYC → dépôt simulé → marché multi-titres → achat/vente → liquidité → settlement → portefeuille → journal → éducation → NOC / SGI**.
 
 ```bash
 pnpm install && pnpm build
@@ -48,15 +51,29 @@ pnpm --filter @aotc/journal-ui start
 # → http://localhost:8787
 ```
 
-**CLI** (chronologie seule)
+Dev UI (proxy API) :
+
+```bash
+pnpm --filter @aotc/journal-ui build   # compile le serveur
+pnpm --filter @aotc/journal-ui start   # API :8787
+# autre terminal :
+pnpm --filter @aotc/journal-ui dev     # Vite :5173 → proxy /api
+```
+
+**CLI** (chronologie Lot 1 seule) :
 
 ```bash
 pnpm --filter @aotc/simulation-journal demo
 ```
 
-## Lot 1 — suite (une PR = une feature)
+## Ce que la sandbox couvre
 
-Voir la roadmap dans [`docs/AOTC-Lot1-Scenario-E2E.md`](./docs/AOTC-Lot1-Scenario-E2E.md) :
-Auth+MFA → KYC → Market Data → Dépôt simulé → Risk → SOR → Trading → Settlement → Liquidity → Portefeuille/Audit.
+- 5 actions DEMO (SNTS, ORAG, SGBC, BOAB, TTLC) + carnet + sparkline
+- Ordres market/limit, buy/sell, annulation
+- Risk pré-trade (KYC, cash, titres, marché)
+- Matching prix/temps + intervention liquidité `SGI_PARTNER` (vente sans acheteur)
+- Settlement T+3 (instruire / confirmer)
+- Journal d’activité moteurs, stats SGI, NOC + kill-switch
+- Modules éducation
 
-Hors scope pour l'instant (interfaces / stubs) : AI, monitoring avancé, treasury complet, partner avancé, pricing dynamique, API publique, Mobile Money réel, SGI réelle, flux BRVM réel.
+Hors scope production : Mobile Money réel, SGI réelle, flux BRVM réel, Redis/NATS, agrément CREPMF.
