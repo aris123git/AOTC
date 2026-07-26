@@ -4,12 +4,24 @@ import type {
   OrderBookSnapshot,
 } from "@aotc/core";
 
+export type RestingOrderDetail = {
+  instrument_id: InstrumentId;
+  order_id: string;
+  side: "buy" | "sell";
+  price: number;
+  qty: number;
+  accepted_at: string;
+  user_id?: string;
+  sgi_id?: string;
+};
+
 /**
  * Adapter in-memory du carnet — hors « logique matching ».
  * Remplacé plus tard par Redis sans toucher TradingEngine (Règle #1).
  */
 export class InMemoryOrderBookRepository implements OrderBookRepository {
   private books = new Map<string, OrderBookSnapshot>();
+  private orders = new Map<string, RestingOrderDetail>();
 
   async getSnapshot(instrumentId: InstrumentId): Promise<OrderBookSnapshot> {
     return (
@@ -22,51 +34,51 @@ export class InMemoryOrderBookRepository implements OrderBookRepository {
     );
   }
 
+  async listOrders(instrumentId: InstrumentId): Promise<RestingOrderDetail[]> {
+    return [...this.orders.values()]
+      .filter((o) => o.instrument_id === instrumentId && o.qty > 0)
+      .sort((a, b) => a.accepted_at.localeCompare(b.accepted_at));
+  }
+
+  async getOrder(orderId: string): Promise<RestingOrderDetail | null> {
+    return this.orders.get(orderId) ?? null;
+  }
+
   async upsertRestingOrder(input: {
     instrument_id: InstrumentId;
     order_id: string;
     side: "buy" | "sell";
     price: number;
     qty: number;
+    user_id?: string;
+    sgi_id?: string;
+    accepted_at?: string;
   }): Promise<void> {
-    const snap = await this.getSnapshot(input.instrument_id);
-    const side = input.side === "buy" ? snap.bids : snap.asks;
-    const level = side.find((l) => l.price === input.price);
-    if (level) {
-      level.qty += input.qty;
-      level.order_ids.push(input.order_id);
-    } else {
-      side.push({
-        price: input.price,
-        qty: input.qty,
-        order_ids: [input.order_id],
-      });
-    }
-    if (input.side === "buy") {
-      snap.bids.sort((a, b) => b.price - a.price);
-    } else {
-      snap.asks.sort((a, b) => a.price - b.price);
-    }
-    snap.updated_at = new Date().toISOString();
-    this.books.set(input.instrument_id, snap);
+    const existing = this.orders.get(input.order_id);
+    const detail: RestingOrderDetail = {
+      instrument_id: input.instrument_id,
+      order_id: input.order_id,
+      side: input.side,
+      price: input.price,
+      qty: input.qty,
+      accepted_at: existing?.accepted_at ?? input.accepted_at ?? new Date().toISOString(),
+      user_id: input.user_id ?? existing?.user_id,
+      sgi_id: input.sgi_id ?? existing?.sgi_id,
+    };
+    this.orders.set(input.order_id, detail);
+    this.rebuildBook(input.instrument_id);
   }
 
   async removeOrder(instrumentId: InstrumentId, orderId: string): Promise<void> {
-    const snap = await this.getSnapshot(instrumentId);
-    for (const side of [snap.bids, snap.asks]) {
-      for (const level of side) {
-        const idx = level.order_ids.indexOf(orderId);
-        if (idx >= 0) {
-          level.order_ids.splice(idx, 1);
-          // qty recalculée naïvement ; matching fin viendra plus tard
-          if (level.order_ids.length === 0) level.qty = 0;
-        }
-      }
+    const order = this.orders.get(orderId);
+    if (order && order.instrument_id === instrumentId) {
+      this.orders.delete(orderId);
+    } else if (order) {
+      this.orders.delete(orderId);
+    } else {
+      // compat : retirer de l'ancien book si présent sans Map orders
     }
-    snap.bids = snap.bids.filter((l) => l.qty > 0);
-    snap.asks = snap.asks.filter((l) => l.qty > 0);
-    snap.updated_at = new Date().toISOString();
-    this.books.set(instrumentId, snap);
+    this.rebuildBook(instrumentId);
   }
 
   async reduceOrderQty(
@@ -74,17 +86,53 @@ export class InMemoryOrderBookRepository implements OrderBookRepository {
     orderId: string,
     qty: number,
   ): Promise<void> {
-    const snap = await this.getSnapshot(instrumentId);
-    for (const side of [snap.bids, snap.asks]) {
-      for (const level of side) {
-        if (level.order_ids.includes(orderId)) {
-          level.qty = Math.max(0, level.qty - qty);
-        }
+    const order = this.orders.get(orderId);
+    if (!order || order.instrument_id !== instrumentId) {
+      this.rebuildBook(instrumentId);
+      return;
+    }
+    order.qty = Math.max(0, order.qty - qty);
+    if (order.qty === 0) {
+      this.orders.delete(orderId);
+    } else {
+      this.orders.set(orderId, order);
+    }
+    this.rebuildBook(instrumentId);
+  }
+
+  clear(): void {
+    this.books.clear();
+    this.orders.clear();
+  }
+
+  private rebuildBook(instrumentId: InstrumentId): void {
+    const bidsMap = new Map<number, { price: number; qty: number; order_ids: string[] }>();
+    const asksMap = new Map<number, { price: number; qty: number; order_ids: string[] }>();
+
+    for (const order of this.orders.values()) {
+      if (order.instrument_id !== instrumentId || order.qty <= 0) continue;
+      const map = order.side === "buy" ? bidsMap : asksMap;
+      const level = map.get(order.price);
+      if (level) {
+        level.qty += order.qty;
+        level.order_ids.push(order.order_id);
+      } else {
+        map.set(order.price, {
+          price: order.price,
+          qty: order.qty,
+          order_ids: [order.order_id],
+        });
       }
     }
-    snap.bids = snap.bids.filter((l) => l.qty > 0);
-    snap.asks = snap.asks.filter((l) => l.qty > 0);
-    snap.updated_at = new Date().toISOString();
-    this.books.set(instrumentId, snap);
+
+    const bids = [...bidsMap.values()].sort((a, b) => b.price - a.price);
+    const asks = [...asksMap.values()].sort((a, b) => a.price - b.price);
+
+    this.books.set(instrumentId, {
+      instrument_id: instrumentId,
+      bids,
+      asks,
+      updated_at: new Date().toISOString(),
+    });
   }
 }

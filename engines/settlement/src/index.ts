@@ -11,10 +11,16 @@ import {
   type SettlementInstructed,
 } from "@aotc/contracts";
 
+export type StoredSettlement = Omit<SettlementInstructed, "status"> & {
+  status: "instructed" | "confirmed";
+  confirmed_at?: string;
+};
+
 export class SettlementEngine extends BaseEngine {
   readonly name = "settlement";
   private unsub: (() => Promise<void>) | null = null;
   private cycleDays = 3;
+  private settlements: StoredSettlement[] = [];
 
   protected async onStart(ctx: EngineContext): Promise<void> {
     const sub = await ctx.bus.subscribe(
@@ -36,6 +42,7 @@ export class SettlementEngine extends BaseEngine {
           settlement_date: settlementDate,
           status: "instructed",
         };
+        this.settlements.push({ ...instructed });
         await ctx.bus.publish(
           TOPICS.SETTLEMENT_INSTRUCTED,
           createEnvelope({
@@ -54,6 +61,29 @@ export class SettlementEngine extends BaseEngine {
 
   protected async onStop(): Promise<void> {
     if (this.unsub) await this.unsub();
+  }
+
+  list(): StoredSettlement[] {
+    return [...this.settlements];
+  }
+
+  confirm(settlementId: string): StoredSettlement | null {
+    const s = this.settlements.find((x) => x.settlement_id === settlementId);
+    if (!s || s.status === "confirmed") return s ?? null;
+    s.status = "confirmed";
+    s.confirmed_at = new Date().toISOString();
+    return s;
+  }
+
+  /** Confirme le plus ancien settlement encore « instructed ». */
+  confirmOldest(): StoredSettlement | null {
+    const oldest = this.settlements.find((s) => s.status === "instructed");
+    if (!oldest) return null;
+    return this.confirm(oldest.settlement_id);
+  }
+
+  clear(): void {
+    this.settlements = [];
   }
 }
 

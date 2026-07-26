@@ -13,6 +13,7 @@
     "clean": "rm -rf dist dist-server"
   },
   "dependencies": {
+    "@aotc/sandbox-platform": "workspace:*",
     "@aotc/simulation-journal": "workspace:*",
     "express": "^4.21.2"
   },

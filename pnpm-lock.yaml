@@ -23,6 +23,9 @@ importers:
 
   apps/journal:
     dependencies:
+      '@aotc/sandbox-platform':
+        specifier: workspace:*
+        version: link:../../packages/sandbox-platform
       '@aotc/simulation-journal':
         specifier: workspace:*
         version: link:../../packages/simulation-journal
@@ -294,6 +297,55 @@ importers:
       '@aotc/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@26.1.1)
+
+  packages/sandbox-platform:
+    dependencies:
+      '@aotc/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@aotc/core':
+        specifier: workspace:*
+        version: link:../core
+      '@aotc/engine-liquidity':
+        specifier: workspace:*
+        version: link:../../engines/liquidity
+      '@aotc/engine-monitoring':
+        specifier: workspace:*
+        version: link:../../engines/monitoring
+      '@aotc/engine-partner':
+        specifier: workspace:*
+        version: link:../../engines/partner
+      '@aotc/engine-pricing':
+        specifier: workspace:*
+        version: link:../../engines/pricing
+      '@aotc/engine-risk':
+        specifier: workspace:*
+        version: link:../../engines/risk
+      '@aotc/engine-settlement':
+        specifier: workspace:*
+        version: link:../../engines/settlement
+      '@aotc/engine-sor':
+        specifier: workspace:*
+        version: link:../../engines/sor
+      '@aotc/engine-trading':
+        specifier: workspace:*
+        version: link:../../engines/trading
+      '@aotc/engine-treasury':
+        specifier: workspace:*
+        version: link:../../engines/treasury
+      '@aotc/message-bus':
+        specifier: workspace:*
+        version: link:../message-bus
+      '@aotc/simulation-journal':
+        specifier: workspace:*
+        version: link:../simulation-journal
     devDependencies:
       typescript:
         specifier: ^5.7.2
