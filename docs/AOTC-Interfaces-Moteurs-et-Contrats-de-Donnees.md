@@ -4,6 +4,8 @@
 > Complète : *Architecture Fonctionnelle et Métier* et l'architecture technique.
 > Objectif : figer les frontières et les messages afin que le développement avance sans remettre en cause les fondations.
 > **Convention de typage :** TypeScript + Zod (source de vérité dans `packages/contracts`). Tous les montants sont en **entiers (minor units) XOF**, tous les horodatages en **ISO-8601 UTC**.
+>
+> **À lire en premier :** [Principes d'Architecture Immutables](./AOTC-Principes-Architecture-Immutables.md).
 
 ---
 
@@ -34,7 +36,7 @@
 | **Market Data Service** | flux BRVM / interne | `PriceTick`, `BookSnapshot`, `Candle`, `CorporateAction` | Async (publication) |
 | **Partner Management Engine** | flux trades/commissions | `PartnerStatsUpdated` | Async (agrégation) |
 | **Monitoring Engine** | tous les événements | `MarketAbuseAlert` | Async (consumer) |
-| **AI Engine** (réservé) | tous les événements (lecture) | (aucune sortie active au MVP) | Async (consumer) |
+| **Decision Engine** | tous les événements (lecture) | `DecisionSignal` (aucune sortie active au MVP) | Async (consumer) |
 
 ```
 OrderRequested ─▶ Risk(pré-trade) ─▶ Treasury(réserve) ─▶ SOR ─▶ Pricing(quote)
@@ -80,6 +82,7 @@ aotc.treasury.reserved       aotc.treasury.released
 aotc.settlement.instructed   aotc.settlement.confirmed   aotc.settlement.failed
 aotc.marketdata.tick         aotc.marketdata.candle      aotc.marketdata.corporate_action
 aotc.partner.stats           aotc.monitoring.alert
+aotc.decision.signal         aotc.simulation.journal
 ```
 
 ---
@@ -318,13 +321,13 @@ Réconciliation quotidienne : `SettlementFailed` ou écart → `RiskAlert` + gel
 ## 9. Contrat — Market Data Service
 
 ```ts
-interface PriceTick { asset_id: string; last: number; mid: number; ts: string; source: "brvm_official" | "aotc_computed"; }
+interface PriceTick { asset_id: string; last: number; mid: number; ts: string; source: "exchange_official" | "aotc_computed"; } // exchange_official = place (BRVM/BVMAC/…) — pas de hardcode
 interface BookSnapshot { asset_id: string; bids: {price:number; qty:number}[]; asks: {price:number; qty:number}[]; ts: string; }
 interface Candle { asset_id: string; tf: "1m"|"1h"|"1d"; o:number; h:number; l:number; c:number; v:number; ts: string; }
 interface CorporateAction { asset_id: string; kind: "dividend"|"split"|"rights_issue"|"coupon"|"redemption"; ex_date: string; details: Record<string, unknown>; }
 ```
 
-Séparation explicite `brvm_official` vs `aotc_computed` (transparence réglementaire).
+Séparation explicite `exchange_official` vs `aotc_computed` (transparence réglementaire ; multibourse).
 
 ---
 

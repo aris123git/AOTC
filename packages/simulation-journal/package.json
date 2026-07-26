@@ -1,0 +1,37 @@
+{
+  "name": "@aotc/simulation-journal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "demo": "node dist/cli.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aotc/contracts": "workspace:*",
+    "@aotc/core": "workspace:*",
+    "@aotc/message-bus": "workspace:*",
+    "@aotc/engine-risk": "workspace:*",
+    "@aotc/engine-sor": "workspace:*",
+    "@aotc/engine-trading": "workspace:*",
+    "@aotc/engine-liquidity": "workspace:*",
+    "@aotc/engine-settlement": "workspace:*",
+    "@aotc/engine-treasury": "workspace:*",
+    "@aotc/engine-pricing": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

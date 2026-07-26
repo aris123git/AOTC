@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AOTC — Investir</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  --ink: #10241c;
+  --ink-soft: #3a5348;
+  --brand: #0b3d2e;
+  --brand-deep: #072820;
+  --accent: #c9a227;
+  --accent-deep: #9a7a12;
+  --surface: rgba(255, 255, 255, 0.48);
+  --line: rgba(11, 61, 46, 0.14);
+  --ok: #1f7a4c;
+  --engine: #0f5c6b;
+  --audit: #5a4a2a;
+  --font-display: "Bricolage Grotesque", Georgia, serif;
+  --font-body: "Manrope", "Segoe UI", sans-serif;
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.45;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(201, 162, 39, 0.22), transparent 55%),
+    radial-gradient(900px 600px at 90% 8%, rgba(15, 92, 107, 0.16), transparent 50%),
+    linear-gradient(165deg, #e7f1ec 0%, #d7e6df 42%, #cfe0e4 100%);
+}
+.app { max-width: 720px; margin: 0 auto; min-height: 100vh; padding: 0 clamp(1.1rem, 3vw, 2rem) 3.5rem; position: relative; }
+.hidden { display: none !important; }
+.topnav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 0 0.5rem; }
+.nav-brand, .nav-links button { appearance: none; border: 0; background: transparent; cursor: pointer; font-family: inherit; }
+.nav-brand { font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; letter-spacing: -0.04em; color: var(--brand); padding: 0; }
+.nav-links { display: flex; gap: 0.15rem; }
+.nav-links button { font-size: 0.92rem; font-weight: 500; color: var(--ink-soft); padding: 0.45rem 0.7rem; border-radius: 0.3rem; }
+.nav-links button.active, .nav-links button:hover { color: var(--brand); background: rgba(11, 61, 46, 0.06); }
+.screen { padding-top: 1.75rem; animation: rise 650ms ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.welcome { min-height: calc(100vh - 1rem); display: grid; align-items: end; padding-bottom: 3rem; position: relative; }
+.hero-plane {
+  position: absolute; inset: -1rem clamp(-1.1rem, -3vw, -2rem) 35%; z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(7, 40, 32, 0.08), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 70% 20%, rgba(201, 162, 39, 0.35), transparent 55%),
+    linear-gradient(145deg, #0b3d2e 0%, #0f5240 48%, #0f5c6b 100%);
+}
+.welcome-copy { position: relative; padding-top: 42vh; }
+.brand { margin: 0 0 0.65rem; font-family: var(--font-display); font-size: clamp(3.2rem, 12vw, 5.2rem); font-weight: 700; letter-spacing: -0.045em; line-height: 0.9; color: #f3f8f5; }
+h1 { margin: 0; font-family: var(--font-display); font-size: clamp(1.45rem, 3.6vw, 2rem); font-weight: 500; letter-spacing: -0.02em; }
+.welcome h1 { color: #f7fbf8; max-width: 16ch; }
+.lede { margin: 0.85rem 0 0; max-width: 34rem; color: var(--ink-soft); font-size: 1.02rem; }
+.welcome .lede { color: rgba(243, 248, 245, 0.86); }
+.eyebrow { margin: 0 0 0.55rem; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-deep); }
+.cta-row { display: flex; flex-wrap: wrap; gap: 0.85rem 1rem; margin-top: 1.6rem; }
+.cta, .cta-ghost, .doc-slot { appearance: none; cursor: pointer; font-family: inherit; border-radius: 0.35rem; }
+.cta { border: 0; background: var(--brand); color: #f4faf6; font-weight: 600; font-size: 0.95rem; padding: 0.85rem 1.35rem; box-shadow: 0 10px 24px rgba(11, 61, 46, 0.18); }
+.welcome .cta { background: var(--accent); color: var(--brand-deep); }
+.cta:disabled { opacity: 0.55; cursor: not-allowed; }
+.cta-ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); font-weight: 600; font-size: 0.95rem; padding: 0.85rem 1.35rem; }
+.stack-form { display: grid; gap: 1rem; margin-top: 1.75rem; max-width: 26rem; }
+.stack-form label { display: grid; gap: 0.4rem; font-size: 0.9rem; font-weight: 500; color: var(--ink-soft); }
+.stack-form input { border: 1px solid var(--line); background: var(--surface); border-radius: 0.35rem; padding: 0.85rem 0.95rem; font: inherit; color: var(--ink); }
+.doc-slot { width: 100%; text-align: left; border: 1px dashed rgba(11, 61, 46, 0.28); background: var(--surface); padding: 1.25rem 1.1rem; font-weight: 500; color: var(--ink-soft); margin-top: 1.75rem; }
+.doc-slot.ready { border-style: solid; border-color: var(--ok); color: var(--ok); }
+.status-ok { color: var(--ok); font-weight: 600; }
+.amount-hero { display: flex; align-items: baseline; gap: 0.55rem; margin: 2rem 0 0.5rem; }
+.amount-value { font-family: var(--font-display); font-size: clamp(2.8rem, 10vw, 4rem); font-weight: 700; letter-spacing: -0.04em; color: var(--brand); line-height: 1; }
+.instrument-row { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: left; cursor: pointer; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: transparent; padding: 1.15rem 0; font: inherit; }
+.instrument-row strong { display: block; font-family: var(--font-display); font-size: 1.25rem; }
+.instrument-row span { display: block; margin-top: 0.2rem; color: var(--ink-soft); font-size: 0.92rem; }
+.instrument-price { text-align: right; }
+.order-summary { margin: 1.75rem 0 0; padding: 0; display: grid; gap: 0.85rem; }
+.order-summary div { display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+.order-summary dt { margin: 0; color: var(--ink-soft); }
+.order-summary dd { margin: 0; font-weight: 600; }
+.balance-value { margin: 0; font-family: var(--font-display); font-size: clamp(2.4rem, 8vw, 3.4rem); font-weight: 700; letter-spacing: -0.04em; color: var(--brand); line-height: 1; }
+.balance-label, .holding-label, .cash-hint { color: var(--ink-soft); }
+.timeline { list-style: none; margin: 1.25rem 0 0; padding: 0; border-left: 2px solid var(--line); margin-left: 0.35rem; }
+.event { display: grid; grid-template-columns: 4.6rem 1fr; gap: 0.85rem; padding: 0.72rem 0 0.72rem 1.25rem; position: relative; opacity: 0; animation: enter 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.event.visible { opacity: 1; animation: none; }
+.event::before { content: ""; position: absolute; left: -5px; top: 1.15rem; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.event time { font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--ink-soft); }
+.tone-success span { color: var(--ok); }
+.tone-engine span { color: var(--engine); }
+.tone-audit span { color: var(--audit); }
+@keyframes enter { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+.ids { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.78rem; font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+@media (max-width: 560px) { .event { grid-template-columns: 1fr; gap: 0.2rem; } .welcome-copy { padding-top: 38vh; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav id="nav" class="topnav hidden" aria-label="Navigation principale">
+      <button type="button" class="nav-brand" data-go="market">AOTC</button>
+      <div class="nav-links">
+        <button type="button" data-go="market">Marché</button>
+        <button type="button" data-go="portfolio">Portefeuille</button>
+        <button type="button" data-go="activity">Activité</button>
+      </div>
+    </nav>
+
+    <section id="welcome" class="screen welcome">
+      <div class="hero-plane" aria-hidden="true"></div>
+      <div class="welcome-copy">
+        <p class="brand">AOTC</p>
+        <h1>Investissez sur les marchés ouest-africains</h1>
+        <p class="lede">Compte, KYC, dépôt et premier ordre — en mode sandbox, comme en production.</p>
+        <div class="cta-row"><button type="button" class="cta" data-go="signup">Ouvrir mon compte</button></div>
+      </div>
+    </section>
+
+    <section id="signup" class="screen hidden">
+      <p class="eyebrow">Étape 1 · Compte</p>
+      <h1>Créer votre profil investisseur</h1>
+      <p class="lede">Identifiants sandbox — aucune donnée réelle n’est envoyée.</p>
+      <form id="signup-form" class="stack-form">
+        <label>Nom complet <input id="name" value="Aïcha Diallo" required /></label>
+        <label>E-mail <input id="email" type="email" value="aicha@exemple.sn" required /></label>
+        <button type="submit" class="cta">Continuer</button>
+      </form>
+    </section>
+
+    <section id="kyc" class="screen hidden">
+      <p class="eyebrow">Étape 2 · KYC</p>
+      <h1>Vérification d’identité</h1>
+      <p class="lede">Soumettez vos pièces. La SGI partenaire valide le dossier en sandbox.</p>
+      <button type="button" id="doc" class="doc-slot">Ajouter une pièce d’identité</button>
+      <p id="kyc-ok" class="status-ok hidden"></p>
+      <div class="cta-row"><button type="button" id="to-deposit" class="cta" disabled data-go="deposit">Accéder au dépôt</button></div>
+    </section>
+
+    <section id="deposit" class="screen hidden">
+      <p class="eyebrow">Étape 3 · Liquidités</p>
+      <h1>Dépôt simulé</h1>
+      <p class="lede">Crédit sandbox Mobile Money — sans mouvement réel de fonds.</p>
+      <div class="amount-hero"><span class="amount-value">50 000</span><span>XOF</span></div>
+      <div class="cta-row"><button type="button" id="do-deposit" class="cta">Déposer 50 000 XOF</button></div>
+    </section>
+
+    <section id="market" class="screen hidden">
+      <p class="eyebrow">Marché · DEMO</p>
+      <h1>Actions disponibles</h1>
+      <p class="lede">Catalogue simulé Lot&nbsp;1 — un titre pour prouver le parcours.</p>
+      <button type="button" class="instrument-row" data-go="order">
+        <div><strong>SNTS</strong><span>Sonatel</span></div>
+        <div class="instrument-price"><strong>150</strong><span>XOF</span></div>
+      </button>
+      <p class="cash-hint">Cash disponible · <strong id="cash-mkt">0</strong> XOF</p>
+    </section>
+
+    <section id="order" class="screen hidden">
+      <p class="eyebrow">Ordre d’achat</p>
+      <h1>SNTS · Sonatel</h1>
+      <p class="lede">Achat limite · 100 titres @ 150 XOF</p>
+      <dl class="order-summary">
+        <div><dt>Quantité</dt><dd>100</dd></div>
+        <div><dt>Prix limite</dt><dd>150 XOF</dd></div>
+        <div><dt>Montant estimé</dt><dd>15 000 XOF</dd></div>
+      </dl>
+      <div class="cta-row">
+        <button type="button" id="place-order" class="cta">Passer l’ordre</button>
+        <button type="button" class="cta-ghost" data-go="market">Retour</button>
+      </div>
+    </section>
+
+    <section id="executing" class="screen hidden">
+      <p class="eyebrow">Exécution</p>
+      <h1>Votre ordre traverse les moteurs</h1>
+      <p class="lede">Risk → Treasury → SOR → Trading → Liquidity → Settlement</p>
+      <ol id="live-timeline" class="timeline" aria-live="polite"></ol>
+    </section>
+
+    <section id="portfolio" class="screen hidden">
+      <p class="eyebrow">Portefeuille · sandbox</p>
+      <h1 id="hello">Bonjour</h1>
+      <p class="lede">Positions après votre premier ordre Lot&nbsp;1.</p>
+      <p class="balance-label">Cash disponible</p>
+      <p class="balance-value"><span id="cash-pf">0</span> <span style="font-size:1rem;color:var(--ink-soft)">XOF</span></p>
+      <p class="holding-label">Position</p>
+      <button type="button" class="instrument-row" data-go="activity">
+        <div><strong>SNTS</strong><span id="qty-label">0 titres · Sonatel</span></div>
+        <div class="instrument-price"><strong id="pos-val">0</strong><span>valeur</span></div>
+      </button>
+      <div class="cta-row">
+        <button type="button" class="cta" data-go="market">Voir le marché</button>
+        <button type="button" id="reset" class="cta-ghost">Recommencer la démo</button>
+      </div>
+    </section>
+
+    <section id="activity" class="screen hidden">
+      <p class="eyebrow">Activité & audit</p>
+      <h1>Journal de simulation</h1>
+      <p class="lede">Chronologie complète du parcours — pour vous et vos partenaires.</p>
+      <ol id="full-timeline" class="timeline"></ol>
+      <footer id="ids" class="ids hidden"></footer>
+    </section>
+  </div>
+  <script>
+    const state = {
+      screen: "welcome",
+      name: "Aïcha Diallo",
+      kyc: false,
+      cash: 0,
+      holdings: 0,
+      timeline: [],
+      correlation_id: "",
+      order_id: "",
+      trade_id: "",
+    };
+
+    const screens = ["welcome","signup","kyc","deposit","market","order","executing","portfolio","activity"];
+    const xof = (n) => n.toLocaleString("fr-FR");
+
+    function show(id) {
+      state.screen = id;
+      screens.forEach((s) => document.getElementById(s).classList.toggle("hidden", s !== id));
+      const navOn = !["welcome","signup","kyc"].includes(id) && (state.cash > 0 || state.holdings > 0 || id === "deposit");
+      // show nav after deposit done
+      const showNav = state.cash > 0 || state.holdings > 0;
+      document.getElementById("nav").classList.toggle("hidden", !showNav || id === "welcome" || id === "signup" || id === "kyc");
+      document.querySelectorAll(".nav-links button").forEach((b) => {
+        const go = b.getAttribute("data-go");
+        b.classList.toggle("active", go === id || (id === "order" && go === "market") || (id === "executing" && go === "activity"));
+      });
+      if (id === "market") document.getElementById("cash-mkt").textContent = xof(state.cash);
+      if (id === "portfolio") {
+        document.getElementById("hello").textContent = "Bonjour, " + state.name.split(" ")[0];
+        document.getElementById("cash-pf").textContent = xof(state.cash);
+        document.getElementById("qty-label").textContent = state.holdings + " titres · Sonatel";
+        document.getElementById("pos-val").textContent = xof(state.holdings * 150);
+      }
+      if (id === "activity") renderFullTimeline();
+    }
+
+    function tone(text) {
+      if (/VALIDÉ|approuvée|Exécuté|mis à jour|créé|créée|validé/i.test(text)) return "success";
+      if (/Engine|Router|Treasury|Settlement|Liquidity|Risk|Trading|SOR/i.test(text)) return "engine";
+      if (/Audit/i.test(text)) return "audit";
+      return "neutral";
+    }
+
+    function localTimeline() {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2,"0");
+      const mm = String(t.getMinutes()).padStart(2,"0");
+      const ss = String(t.getSeconds()).padStart(2,"0");
+      const stamp = hh + ":" + mm + ":" + ss;
+      return [
+        stamp + "  Investisseur : compte créé",
+        stamp + "  KYC : pièces soumises",
+        stamp + "  SGI : KYC validé",
+        stamp + "  Dépôt simulé : 50 000 XOF",
+        stamp + "  Actions disponibles : SNTS @ 15000 (DEMO)",
+        stamp + "  Ordre reçu : ACHAT 100 SNTS @ 15000",
+        stamp + "  Risk Engine : VALIDÉ",
+        stamp + "  Treasury : fonds réservés (1500000)",
+        stamp + "  Smart Order Router : Book interne",
+        stamp + "  Trading Engine : ordre reçu et carnet mis à jour",
+        stamp + "  Carnet d'ordres : 1 niveau(x) bid, 0 ask",
+        stamp + "  Liquidity Engine : Intervention approuvée (SGI_PARTNER)",
+        stamp + "  Trading Engine : Exécuté 100 @ 15000",
+        stamp + "  Settlement Engine : Instruction T+3 créée",
+        stamp + "  Portefeuille mis à jour : +100 SNTS, cash=3500000",
+        stamp + "  Audit : parcours journalisé (correlation_id conservé)",
+      ];
+    }
+
+    function appendEvent(listEl, line, visible) {
+      const m = line.match(/^(\d{2}:\d{2}:\d{2})\s+(.*)$/);
+      const li = document.createElement("li");
+      li.className = "event tone-" + tone(m?.[2] || line) + (visible ? " visible" : "");
+      li.innerHTML = "<time>" + (m?.[1] || "") + "</time><span>" + (m?.[2] || line) + "</span>";
+      listEl.appendChild(li);
+    }
+
+    function renderFullTimeline() {
+      const ol = document.getElementById("full-timeline");
+      ol.innerHTML = "";
+      state.timeline.forEach((line) => appendEvent(ol, line, true));
+      const ids = document.getElementById("ids");
+      if (state.correlation_id) {
+        ids.classList.remove("hidden");
+        ids.innerHTML = "<span>correlation · " + state.correlation_id + "</span><span>ordre · " + state.order_id + "</span>" +
+          (state.trade_id ? "<span>trade · " + state.trade_id + "</span>" : "");
+      } else {
+        ids.classList.add("hidden");
+      }
+    }
+
+    async function placeOrder() {
+      show("executing");
+      const live = document.getElementById("live-timeline");
+      live.innerHTML = "";
+      let data = null;
+      try {
+        const res = await fetch("/api/demo", { method: "POST" });
+        if (res.ok) data = await res.json();
+      } catch (_) {}
+      if (!data) {
+        data = {
+          correlation_id: crypto.randomUUID(),
+          order_id: crypto.randomUUID(),
+          trade_id: crypto.randomUUID(),
+          timeline: localTimeline(),
+          portfolio: { cash_available: 3_500_000, holdings_qty: 100 },
+        };
+      }
+      state.timeline = data.timeline;
+      state.correlation_id = data.correlation_id;
+      state.order_id = data.order_id;
+      state.trade_id = data.trade_id || "";
+      state.cash = Math.round(data.portfolio.cash_available / 100);
+      state.holdings = data.portfolio.holdings_qty;
+      let i = 0;
+      const tick = () => {
+        if (i >= data.timeline.length) {
+          setTimeout(() => show("portfolio"), 400);
+          return;
+        }
+        appendEvent(live, data.timeline[i], false);
+        i += 1;
+        setTimeout(tick, 140);
+      };
+      tick();
+    }
+
+    document.querySelectorAll("[data-go]").forEach((el) => {
+      el.addEventListener("click", () => show(el.getAttribute("data-go")));
+    });
+    document.getElementById("signup-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      state.name = document.getElementById("name").value.trim() || "Investisseur";
+      show("kyc");
+    });
+    document.getElementById("doc").addEventListener("click", () => {
+      state.kyc = true;
+      document.getElementById("doc").classList.add("ready");
+      document.getElementById("doc").textContent = "Pièce d’identité · prête";
+      document.getElementById("kyc-ok").textContent = "SGI · KYC validé pour " + state.name;
+      document.getElementById("kyc-ok").classList.remove("hidden");
+      document.getElementById("to-deposit").disabled = false;
+    });
+    document.getElementById("do-deposit").addEventListener("click", () => {
+      state.cash = 50000;
+      show("market");
+    });
+    document.getElementById("place-order").addEventListener("click", () => placeOrder());
+    document.getElementById("reset").addEventListener("click", () => {
+      state.cash = 0; state.holdings = 0; state.timeline = []; state.kyc = false;
+      document.getElementById("doc").classList.remove("ready");
+      document.getElementById("doc").textContent = "Ajouter une pièce d’identité";
+      document.getElementById("kyc-ok").classList.add("hidden");
+      document.getElementById("to-deposit").disabled = true;
+      show("welcome");
+    });
+  </script>
+</body>
+</html>

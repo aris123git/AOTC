@@ -4,6 +4,8 @@
 > Il précède l'implémentation et complète le document d'architecture technique.
 > **Statut :** validé pour servir de base au développement du Lot 1.
 > **Mode de liquidité retenu :** `SGI_PARTNER` (SGI partenaire adossée), évolutif vers `AOTC_PRINCIPAL`.
+>
+> **À lire en premier :** [Principes d'Architecture Immutables](./AOTC-Principes-Architecture-Immutables.md) — prévalent en cas de conflit.
 
 ---
 
@@ -35,7 +37,7 @@ Services de support (prévus dès l'architecture, activés progressivement) :
 - **Smart Order Router (SOR)** — sélection de la meilleure destination d'exécution.
 - **Market Data Service** — données officielles BRVM, données calculées AOTC, OHLC, corporate actions.
 - **Monitoring Engine (surveillance de marché)** — détection d'abus (wash trading, spoofing, layering, volumes anormaux).
-- **AI Engine** — réservé (prix juste, détection de fraude, scoring, prévision de liquidité) — inactif au MVP.
+- **Decision Engine** — interface d'intelligence dès le jour 1 (IA, recommandations, prévision de liquidité, anomalies, spreads) — no-op au MVP (voir Principes Immutables §6).
 - **Message Bus** (Redis Streams au démarrage → NATS/RabbitMQ plus tard) — découplage des services.
 - **Cache Redis** — book, derniers prix, sessions, rate limiting, fan-out temps réel.
 - **API Gateway** — auth, rate limiting, versioning, logs, API partenaires (banques/fintechs).
