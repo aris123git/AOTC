@@ -1,4 +1,22 @@
-/** Client HTTP sandbox AOTC. */
+/** Client HTTP sandbox AOTC (Lot 2 — session token). */
+
+const SESSION_KEY = "aotc_session";
+
+let sessionToken: string | null =
+  typeof localStorage !== "undefined"
+    ? localStorage.getItem(SESSION_KEY)
+    : null;
+
+function saveSession(token: string | null) {
+  sessionToken = token;
+  if (typeof localStorage === "undefined") return;
+  if (token) localStorage.setItem(SESSION_KEY, token);
+  else localStorage.removeItem(SESSION_KEY);
+}
+
+export function getSessionToken(): string | null {
+  return sessionToken;
+}
 
 export type MarketSymbol = {
   symbol: string;
@@ -44,6 +62,7 @@ export type User = {
   email: string;
   kyc_status: "pending" | "approved";
   sgi_id: string;
+  mfa_enabled?: boolean;
 };
 
 export type Portfolio = {
@@ -147,10 +166,123 @@ export type PlaceOrderResult = {
   rejected: boolean;
 };
 
+export type OtpRequestResult = {
+  email: string;
+  dev_code: string;
+  expires_at: number;
+};
+
+export type AuthSessionResult = {
+  session_token: string;
+  user: User;
+};
+
+export type MfaSetupResult = {
+  secret: string;
+  otpauth_url: string;
+};
+
+export type PaymentIntent = {
+  id: string;
+  user_id: string;
+  kind: "deposit" | "withdraw";
+  amount: number;
+  status: "pending" | "succeeded" | "failed";
+  idempotency_key: string;
+  created_at: string;
+};
+
+export type GovernanceAction =
+  | "kill_switch"
+  | "set_liquidity_mode"
+  | "change_exposure_limit";
+
+export type GovernanceProposal = {
+  id: string;
+  action: GovernanceAction | string;
+  payload: Record<string, unknown>;
+  status: "pending" | "approved" | "rejected";
+  proposed_by: string;
+  approved_by?: string | null;
+  created_at: string;
+};
+
+export type ApiKey = {
+  id: string;
+  name: string;
+  sgi_id: string;
+  created_at: string;
+  revoked_at?: string | null;
+  raw_key?: string;
+};
+
+export type DecisionSignal = {
+  signal_id: string;
+  kind: string;
+  subject?: {
+    asset_id?: string;
+    instrument_id?: string;
+    sgi_id?: string;
+    user_id?: string;
+  };
+  score?: number;
+  payload: Record<string, unknown>;
+  produced_at: string;
+  actionable: boolean;
+};
+
+export type TreasurySnapshot = {
+  available: number;
+  immobilized: number;
+  credit_lines: Array<{ id: string; ceiling: number; drawn: number }>;
+  capital_by_source: {
+    aotc_own: number;
+    coris: number;
+    credit_line: number;
+  };
+  liquidity_revenue: number;
+};
+
+export type PriceTick = {
+  asset_id: string;
+  instrument_id?: string;
+  exchange_id?: string;
+  symbol?: string;
+  last: number;
+  mid: number;
+  ts: string;
+  source: string;
+};
+
+export type SgiClient = {
+  id: string;
+  name: string;
+  email: string;
+  kyc_status: "pending" | "approved";
+  cash: number;
+  mfa_enabled: boolean;
+};
+
+export type LiquidityMode = "SGI_PARTNER" | "AOTC_PRINCIPAL";
+
+export type SessionDto = {
+  session_id: string;
+  environment: "sandbox";
+  user: User | null;
+  started_at: string;
+  session_token?: string | null;
+};
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (sessionToken) headers["X-AOTC-Session"] = sessionToken;
+
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     ...init,
+    headers,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -161,13 +293,50 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+function captureAuth(result: AuthSessionResult): AuthSessionResult {
+  saveSession(result.session_token);
+  return result;
+}
+
 export const api = {
-  session: () => req<{ user: User | null }>("/api/session"),
-  reset: () => req("/api/session/reset", { method: "POST" }),
+  session: () => req<SessionDto>("/api/session"),
+  reset: async () => {
+    const result = await req<SessionDto>("/api/session/reset", {
+      method: "POST",
+    });
+    saveSession(null);
+    return result;
+  },
   signup: (name: string, email: string) =>
     req<User>("/api/auth/signup", {
       method: "POST",
       body: JSON.stringify({ name, email }),
+    }),
+  requestOtp: (email: string) =>
+    req<OtpRequestResult>("/api/auth/otp/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  verifyOtp: async (email: string, code: string) =>
+    captureAuth(
+      await req<AuthSessionResult>("/api/auth/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      }),
+    ),
+  login: async (email: string, otp: string, mfa?: string) =>
+    captureAuth(
+      await req<AuthSessionResult>("/api/auth/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, code: otp, mfa }),
+      }),
+    ),
+  setupMfa: () =>
+    req<MfaSetupResult>("/api/auth/mfa/setup", { method: "POST" }),
+  verifyMfa: (code: string) =>
+    req<User>("/api/auth/mfa/verify", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     }),
   submitKyc: () => req<User>("/api/kyc/submit", { method: "POST" }),
   deposit: (amount: number) =>
@@ -180,6 +349,44 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ amount }),
     }),
+  createPaymentIntent: (amount: number, kind: "deposit" | "withdraw" = "deposit") =>
+    req<PaymentIntent>("/api/payments/intent", {
+      method: "POST",
+      body: JSON.stringify({ amount, kind }),
+    }),
+  confirmWebhook: (intent_id: string, signature = "sandbox") =>
+    req<PaymentIntent>("/api/payments/webhook", {
+      method: "POST",
+      body: JSON.stringify({ intent_id, signature }),
+    }),
+  treasury: () => req<TreasurySnapshot>("/api/treasury"),
+  decisionSignals: () => req<DecisionSignal[]>("/api/decision/signals"),
+  governance: () => req<GovernanceProposal[]>("/api/governance"),
+  proposeGovernance: (action: string, payload: Record<string, unknown> = {}) =>
+    req<GovernanceProposal>("/api/governance/propose", {
+      method: "POST",
+      body: JSON.stringify({ action, payload }),
+    }),
+  approveGovernance: (id: string) =>
+    req<GovernanceProposal>(`/api/governance/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ actor: "admin" }),
+    }),
+  setLiquidityMode: (mode: LiquidityMode) =>
+    req<{ mode: LiquidityMode }>("/api/admin/liquidity-mode", {
+      method: "POST",
+      body: JSON.stringify({ mode }),
+    }),
+  ticks: () => req<PriceTick[]>("/api/market/ticks"),
+  partnerKeys: () => req<ApiKey[]>("/api/partner/keys"),
+  createPartnerKey: (name: string) =>
+    req<ApiKey>("/api/partner/keys", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+  revokePartnerKey: (id: string) =>
+    req<ApiKey>(`/api/partner/keys/${id}`, { method: "DELETE" }),
+  sgiClients: () => req<SgiClient[]>("/api/sgi/clients"),
   market: () => req<MarketSymbol[]>("/api/market"),
   instrument: (symbol: string) =>
     req<InstrumentDetail>(`/api/market/${symbol}`),
@@ -192,9 +399,13 @@ export const api = {
     qty: number;
     price_limit?: number;
   }) => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (sessionToken) headers["X-AOTC-Session"] = sessionToken;
     const res = await fetch("/api/orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
     });
     const data = (await res.json().catch(() => ({}))) as PlaceOrderResult & {

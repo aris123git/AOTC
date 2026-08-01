@@ -4,22 +4,33 @@ import {
   bpsLabel,
   xof,
   type Activity,
+  type ApiKey,
   type Candle,
+  type DecisionSignal,
   type EducationModule,
+  type GovernanceAction,
+  type GovernanceProposal,
+  type LiquidityMode,
   type MarketSymbol,
   type OpsSnapshot,
   type Order,
   type OrderBook,
   type PartnerStats,
   type Portfolio,
+  type PriceTick,
   type Settlement,
+  type SgiClient,
   type Trade,
+  type TreasurySnapshot,
   type User,
 } from "./api";
+import { generateTotp } from "./totp-client";
 
 type Screen =
   | "welcome"
   | "signup"
+  | "otp"
+  | "mfa"
   | "kyc"
   | "cash"
   | "market"
@@ -29,7 +40,9 @@ type Screen =
   | "settlements"
   | "activity"
   | "education"
-  | "admin";
+  | "admin"
+  | "sgi"
+  | "governance";
 
 const DEPOSIT_PRESETS = [1_000_000, 5_000_000, 10_000_000];
 
@@ -91,6 +104,13 @@ function BookDepth({ book }: { book: OrderBook | null }) {
   );
 }
 
+function afterAuthScreen(u: User, cashAvailable: number): Screen {
+  if (u.kyc_status === "approved") {
+    return cashAvailable > 0 ? "market" : "cash";
+  }
+  return "kyc";
+}
+
 export function App() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [name, setName] = useState("Aïcha Diallo");
@@ -120,6 +140,26 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
+
+  const [otpCode, setOtpCode] = useState("");
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaOtpauth, setMfaOtpauth] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [sandboxTotp, setSandboxTotp] = useState<string | null>(null);
+  const [lastIntentId, setLastIntentId] = useState<string | null>(null);
+  const [treasury, setTreasury] = useState<TreasurySnapshot | null>(null);
+  const [signals, setSignals] = useState<DecisionSignal[]>([]);
+  const [ticks, setTicks] = useState<PriceTick[]>([]);
+  const [liquidityMode, setLiquidityMode] = useState<LiquidityMode>("SGI_PARTNER");
+  const [proposals, setProposals] = useState<GovernanceProposal[]>([]);
+  const [govAction, setGovAction] = useState<GovernanceAction>("kill_switch");
+  const [govSymbol, setGovSymbol] = useState("SNTS");
+  const [govMode, setGovMode] = useState<LiquidityMode>("AOTC_PRINCIPAL");
+  const [govExposure, setGovExposure] = useState(50_000_000);
+  const [sgiClients, setSgiClients] = useState<SgiClient[]>([]);
+  const [partnerKeys, setPartnerKeys] = useState<ApiKey[]>([]);
+  const [keyName, setKeyName] = useState("demo-partner");
 
   const onboarded = user?.kyc_status === "approved" && (portfolio?.cash_available ?? 0) > 0;
   const selected = market.find((m) => m.symbol === symbol) ?? null;
@@ -159,12 +199,18 @@ export function App() {
     setTrades(t);
   }
 
+  function continueAfterMfa(u: User) {
+    const next = afterAuthScreen(u, portfolio?.cash_available ?? 0);
+    setScreen(next);
+  }
+
   useEffect(() => {
     void (async () => {
       try {
         const s = await api.session();
         if (s.user) {
           setUser(s.user);
+          setEmail(s.user.email);
           await refreshPortfolio();
           await refreshMarket();
         }
@@ -174,15 +220,119 @@ export function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (screen !== "market" && screen !== "instrument") return;
+    const id = window.setInterval(() => {
+      void refreshMarket().catch(() => {
+        /* ignore poll errors */
+      });
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [screen]);
+
+  useEffect(() => {
+    if (!mfaSecret) {
+      setSandboxTotp(null);
+      return;
+    }
+    const tick = () => {
+      try {
+        setSandboxTotp(generateTotp(mfaSecret));
+      } catch {
+        setSandboxTotp(null);
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [mfaSecret]);
+
   async function handleSignup() {
     setBusy(true);
     setError(null);
     try {
       const u = await api.signup(name.trim(), email.trim());
       setUser(u);
-      setScreen("kyc");
+      setEmail(u.email);
+      const otp = await api.requestOtp(u.email);
+      setDevCode(otp.dev_code);
+      setOtpCode(otp.dev_code);
+      setFlash(`OTP sandbox envoyé → ${otp.dev_code}`);
+      setScreen("otp");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur inscription");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRequestOtp() {
+    setBusy(true);
+    setError(null);
+    try {
+      const otp = await api.requestOtp(email.trim());
+      setDevCode(otp.dev_code);
+      setOtpCode(otp.dev_code);
+      setFlash(`OTP sandbox → ${otp.dev_code}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "OTP impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { user: u } = await api.verifyOtp(email.trim(), otpCode.trim());
+      setUser(u);
+      setDevCode(null);
+      setOtpCode("");
+      setFlash("Session ouverte (OTP vérifié)");
+      setMfaSecret(null);
+      setMfaOtpauth(null);
+      setMfaCode("");
+      setScreen("mfa");
+      await refreshPortfolio();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "OTP invalide");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSetupMfa() {
+    setBusy(true);
+    setError(null);
+    try {
+      const setup = await api.setupMfa();
+      setMfaSecret(setup.secret);
+      setMfaOtpauth(setup.otpauth_url);
+      try {
+        setMfaCode(generateTotp(setup.secret));
+      } catch {
+        /* ignore */
+      }
+      setFlash("Secret MFA généré (sandbox)");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Setup MFA impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleVerifyMfa() {
+    setBusy(true);
+    setError(null);
+    try {
+      const code = mfaCode.trim() || (mfaSecret ? generateTotp(mfaSecret) : "");
+      const u = await api.verifyMfa(code);
+      setUser(u);
+      setFlash("MFA activé");
+      continueAfterMfa(u);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "MFA invalide");
     } finally {
       setBusy(false);
     }
@@ -214,6 +364,23 @@ export function App() {
       setScreen("market");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Dépôt refusé");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleWebhookDeposit() {
+    setBusy(true);
+    setError(null);
+    try {
+      const intent = await api.createPaymentIntent(depositAmt, "deposit");
+      setLastIntentId(intent.id);
+      await api.confirmWebhook(intent.id, "sandbox");
+      await refreshPortfolio();
+      await refreshMarket();
+      setFlash(`Webhook PSP confirmé · intent ${intent.id.slice(0, 8)}…`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Webhook refusé");
     } finally {
       setBusy(false);
     }
@@ -284,9 +451,31 @@ export function App() {
       if (screenName === "activity") setActivity(await api.activity());
       if (screenName === "education") setEducation(await api.education());
       if (screenName === "admin") {
-        const [o, p] = await Promise.all([api.ops(), api.partner()]);
+        const [o, p, t, sig, tk] = await Promise.all([
+          api.ops(),
+          api.partner(),
+          api.treasury(),
+          api.decisionSignals(),
+          api.ticks(),
+        ]);
         setOps(o);
         setPartner(p);
+        setTreasury(t);
+        setSignals(sig);
+        setTicks(tk);
+      }
+      if (screenName === "sgi") {
+        const [clients, keys, p] = await Promise.all([
+          api.sgiClients(),
+          api.partnerKeys(),
+          api.partner(),
+        ]);
+        setSgiClients(clients);
+        setPartnerKeys(keys);
+        setPartner(p);
+      }
+      if (screenName === "governance") {
+        setProposals(await api.governance());
       }
       if (screenName === "cash") await refreshPortfolio();
     } catch (e) {
@@ -308,6 +497,18 @@ export function App() {
       setFlash(null);
       setError(null);
       setKycDoc(false);
+      setDevCode(null);
+      setOtpCode("");
+      setMfaSecret(null);
+      setMfaOtpauth(null);
+      setMfaCode("");
+      setLastIntentId(null);
+      setTreasury(null);
+      setSignals([]);
+      setTicks([]);
+      setProposals([]);
+      setSgiClients([]);
+      setPartnerKeys([]);
       setScreen("welcome");
     } finally {
       setBusy(false);
@@ -344,6 +545,12 @@ export function App() {
                 </button>
                 <button type="button" className={screen === "education" ? "active" : ""} onClick={() => go("education")}>
                   Éducation
+                </button>
+                <button type="button" className={screen === "sgi" ? "active" : ""} onClick={() => go("sgi")}>
+                  SGI
+                </button>
+                <button type="button" className={screen === "governance" ? "active" : ""} onClick={() => go("governance")}>
+                  Gouvernance
                 </button>
                 <button type="button" className={screen === "admin" ? "active" : ""} onClick={() => go("admin")}>
                   NOC
@@ -385,6 +592,17 @@ export function App() {
               <button type="button" className="cta" onClick={() => setScreen("signup")}>
                 Ouvrir mon compte
               </button>
+              <button
+                type="button"
+                className="cta-ghost light"
+                onClick={() => {
+                  setDevCode(null);
+                  setOtpCode("");
+                  setScreen("otp");
+                }}
+              >
+                Se connecter (OTP)
+              </button>
               <button type="button" className="cta-ghost light" onClick={() => go("education")}>
                 Comprendre la bourse
               </button>
@@ -409,6 +627,110 @@ export function App() {
             </label>
             <button type="button" className="cta" disabled={busy || !name || !email} onClick={() => void handleSignup()}>
               Continuer
+            </button>
+          </div>
+        </section>
+      )}
+
+      {screen === "otp" && (
+        <section className="screen form-screen">
+          <p className="eyebrow">Auth · OTP</p>
+          <h1>Vérification e-mail</h1>
+          <p className="lede">
+            Code à usage unique — en sandbox le code est affiché pour la démo.
+          </p>
+          <div className="stack-form">
+            <label>
+              E-mail
+              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+            </label>
+            <button
+              type="button"
+              className="cta-ghost"
+              disabled={busy || !email}
+              onClick={() => void handleRequestOtp()}
+            >
+              Envoyer OTP
+            </button>
+            {devCode && (
+              <p className="status-ok mono">
+                code sandbox : <strong>{devCode}</strong>
+              </p>
+            )}
+            <label>
+              Code OTP
+              <input
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+              />
+            </label>
+            <button
+              type="button"
+              className="cta"
+              disabled={busy || !email || !otpCode}
+              onClick={() => void handleVerifyOtp()}
+            >
+              Vérifier OTP
+            </button>
+          </div>
+        </section>
+      )}
+
+      {screen === "mfa" && (
+        <section className="screen form-screen">
+          <p className="eyebrow">Auth · MFA (optionnel)</p>
+          <h1>Authentification à deux facteurs</h1>
+          <p className="lede">
+            Activez un TOTP sandbox, ou continuez sans MFA.
+            {user?.mfa_enabled ? " · MFA déjà actif sur ce compte." : ""}
+          </p>
+          <div className="stack-form">
+            <button type="button" className="cta-ghost" disabled={busy} onClick={() => void handleSetupMfa()}>
+              Configurer MFA
+            </button>
+            {mfaSecret && (
+              <div className="mfa-box fade-in">
+                <p className="muted tiny">Secret</p>
+                <p className="mono">{mfaSecret}</p>
+                {mfaOtpauth && (
+                  <>
+                    <p className="muted tiny">otpauth</p>
+                    <p className="mono break">{mfaOtpauth}</p>
+                  </>
+                )}
+                {sandboxTotp && (
+                  <p className="status-ok">
+                    code sandbox : <strong>{sandboxTotp}</strong>
+                  </p>
+                )}
+              </div>
+            )}
+            <label>
+              Code TOTP
+              <input
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                inputMode="numeric"
+                placeholder={sandboxTotp ?? "123456"}
+              />
+            </label>
+            <button
+              type="button"
+              className="cta"
+              disabled={busy || (!mfaCode && !mfaSecret)}
+              onClick={() => void handleVerifyMfa()}
+            >
+              Vérifier MFA
+            </button>
+            <button
+              type="button"
+              className="cta-ghost"
+              disabled={busy || !user}
+              onClick={() => user && continueAfterMfa(user)}
+            >
+              Passer
             </button>
           </div>
         </section>
@@ -470,6 +792,17 @@ export function App() {
               <button type="button" className="cta" disabled={busy} onClick={() => void handleDeposit()}>
                 Créditer (simulé)
               </button>
+              <button
+                type="button"
+                className="cta-ghost"
+                disabled={busy}
+                onClick={() => void handleWebhookDeposit()}
+              >
+                Dépôt via webhook PSP
+              </button>
+              {lastIntentId && (
+                <p className="muted tiny mono">Dernier intent : {lastIntentId}</p>
+              )}
             </div>
             <div>
               <h2>Retrait</h2>
@@ -492,7 +825,7 @@ export function App() {
       {screen === "market" && (
         <section className="screen market-screen">
           <div className="section-head">
-            <p className="eyebrow">Marché DEMO · actions</p>
+            <p className="eyebrow">Marché DEMO · actions · live 3s</p>
             <h1>Catalogue coté</h1>
             <p className="lede">Cinq titres simulés — book interne + liquidité SGI_PARTNER.</p>
           </div>
@@ -772,11 +1105,230 @@ export function App() {
         </section>
       )}
 
+      {screen === "sgi" && (
+        <section className="screen portfolio-screen">
+          <p className="eyebrow">Partenaire · SGI</p>
+          <h1>Clients & clés API</h1>
+          <p className="lede">Vue SGI sandbox — clients onboardés et accès partenaire.</p>
+
+          {partner && (
+            <>
+              <h2>Stats · {partner.sgi_id}</h2>
+              <ul className="data-list">
+                <li>
+                  <strong>Volume</strong>
+                  <span>{xof(partner.volume_brought)} XOF</span>
+                </li>
+                <li>
+                  <strong>Commissions</strong>
+                  <span>{xof(partner.commissions)} XOF</span>
+                </li>
+                <li>
+                  <strong>Fill rate</strong>
+                  <span>{(partner.performance.fill_rate * 100).toFixed(0)} %</span>
+                </li>
+              </ul>
+            </>
+          )}
+
+          <h2>Clients</h2>
+          {sgiClients.length === 0 && <p className="muted">Aucun client pour cette SGI.</p>}
+          <ul className="data-list">
+            {sgiClients.map((c) => (
+              <li key={c.id}>
+                <div>
+                  <strong>{c.name}</strong>
+                  <span>
+                    {c.email} · KYC {c.kyc_status}
+                    {c.mfa_enabled ? " · MFA" : ""} · cash {xof(c.cash)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <h2>Clés API</h2>
+          <div className="inline-actions">
+            <label className="inline-field grow">
+              Nom de clé
+              <input value={keyName} onChange={(e) => setKeyName(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              className="cta"
+              disabled={busy || !keyName.trim()}
+              onClick={() =>
+                void (async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const key = await api.createPartnerKey(keyName.trim());
+                    setPartnerKeys(await api.partnerKeys());
+                    if (key.raw_key) {
+                      setFlash(`Clé créée (une seule fois) : ${key.raw_key}`);
+                    } else {
+                      setFlash("Clé créée");
+                    }
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Création clé échouée");
+                  } finally {
+                    setBusy(false);
+                  }
+                })()
+              }
+            >
+              Créer
+            </button>
+          </div>
+          <ul className="data-list">
+            {partnerKeys.map((k) => (
+              <li key={k.id}>
+                <div>
+                  <strong>{k.name}</strong>
+                  <span>
+                    {k.id.slice(0, 8)}… · {k.revoked_at ? "révoquée" : "active"} · {k.created_at.slice(0, 10)}
+                  </span>
+                </div>
+                {!k.revoked_at && (
+                  <button
+                    type="button"
+                    className="chip"
+                    onClick={() =>
+                      void api.revokePartnerKey(k.id).then(async () => {
+                        setPartnerKeys(await api.partnerKeys());
+                        setFlash("Clé révoquée");
+                      })
+                    }
+                  >
+                    Révoquer
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {screen === "governance" && (
+        <section className="screen portfolio-screen">
+          <p className="eyebrow">Gouvernance · multi-acteur</p>
+          <h1>Propositions</h1>
+          <p className="lede">Proposez une action, puis approuvez-la pour l’appliquer.</p>
+
+          <div className="stack-form wide">
+            <label>
+              Action
+              <select
+                value={govAction}
+                onChange={(e) => setGovAction(e.target.value as GovernanceAction)}
+              >
+                <option value="kill_switch">kill_switch</option>
+                <option value="set_liquidity_mode">set_liquidity_mode</option>
+                <option value="change_exposure_limit">change_exposure_limit</option>
+              </select>
+            </label>
+            {govAction === "kill_switch" && (
+              <label>
+                Symbole (vide = marché entier)
+                <input value={govSymbol} onChange={(e) => setGovSymbol(e.target.value)} />
+              </label>
+            )}
+            {govAction === "set_liquidity_mode" && (
+              <label>
+                Mode
+                <select
+                  value={govMode}
+                  onChange={(e) => setGovMode(e.target.value as LiquidityMode)}
+                >
+                  <option value="SGI_PARTNER">SGI_PARTNER</option>
+                  <option value="AOTC_PRINCIPAL">AOTC_PRINCIPAL</option>
+                </select>
+              </label>
+            )}
+            {govAction === "change_exposure_limit" && (
+              <label>
+                Limite (minor)
+                <input
+                  type="number"
+                  value={govExposure}
+                  onChange={(e) => setGovExposure(Number(e.target.value))}
+                />
+              </label>
+            )}
+            <button
+              type="button"
+              className="cta"
+              disabled={busy}
+              onClick={() =>
+                void (async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const payload =
+                      govAction === "kill_switch"
+                        ? govSymbol.trim()
+                          ? { symbol: govSymbol.trim() }
+                          : {}
+                        : govAction === "set_liquidity_mode"
+                          ? { mode: govMode }
+                          : { limit: govExposure };
+                    await api.proposeGovernance(govAction, payload);
+                    setProposals(await api.governance());
+                    setFlash(`Proposition ${govAction} créée`);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Proposition échouée");
+                  } finally {
+                    setBusy(false);
+                  }
+                })()
+              }
+            >
+              Proposer
+            </button>
+          </div>
+
+          <h2>Liste</h2>
+          {proposals.length === 0 && <p className="muted">Aucune proposition.</p>}
+          <ul className="data-list">
+            {proposals.map((p) => (
+              <li key={p.id}>
+                <div>
+                  <strong>
+                    {p.action} · {p.status}
+                  </strong>
+                  <span className="mono">
+                    {JSON.stringify(p.payload)} · {p.proposed_by}
+                    {p.approved_by ? ` → ${p.approved_by}` : ""}
+                  </span>
+                </div>
+                {p.status === "pending" && (
+                  <button
+                    type="button"
+                    className="chip"
+                    onClick={() =>
+                      void api.approveGovernance(p.id).then(async () => {
+                        setProposals(await api.governance());
+                        setFlash("Proposition approuvée");
+                        if (p.action === "set_liquidity_mode" && typeof p.payload.mode === "string") {
+                          setLiquidityMode(p.payload.mode as LiquidityMode);
+                        }
+                      })
+                    }
+                  >
+                    Approuver
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {screen === "admin" && (
         <section className="screen admin-screen">
           <p className="eyebrow">NOC · supervision</p>
           <h1>Opérations & partenaires</h1>
-          <p className="lede">Vue temps réel des moteurs + stats SGI (sandbox).</p>
+          <p className="lede">Vue temps réel des moteurs + treasury + signaux (sandbox).</p>
           {ops && (
             <div className="ops-grid">
               <div>
@@ -810,6 +1362,104 @@ export function App() {
               </ul>
             </>
           )}
+
+          {treasury && (
+            <>
+              <h2>Treasury</h2>
+              <ul className="data-list">
+                <li>
+                  <strong>Disponible</strong>
+                  <span>{xof(treasury.available)} XOF</span>
+                </li>
+                <li>
+                  <strong>Immobilisé</strong>
+                  <span>{xof(treasury.immobilized)} XOF</span>
+                </li>
+                <li>
+                  <strong>Revenus liquidité</strong>
+                  <span>{xof(treasury.liquidity_revenue)} XOF</span>
+                </li>
+                <li>
+                  <strong>Capital AOTC / Coris / Ligne</strong>
+                  <span>
+                    {xof(treasury.capital_by_source.aotc_own)} /{" "}
+                    {xof(treasury.capital_by_source.coris)} /{" "}
+                    {xof(treasury.capital_by_source.credit_line)}
+                  </span>
+                </li>
+              </ul>
+            </>
+          )}
+
+          <h2>Mode liquidité</h2>
+          <div className="side-toggle compact">
+            <button
+              type="button"
+              className={liquidityMode === "SGI_PARTNER" ? "active" : ""}
+              onClick={() =>
+                void api.setLiquidityMode("SGI_PARTNER").then((r) => {
+                  setLiquidityMode(r.mode);
+                  setFlash(`Mode liquidité → ${r.mode}`);
+                })
+              }
+            >
+              SGI_PARTNER
+            </button>
+            <button
+              type="button"
+              className={liquidityMode === "AOTC_PRINCIPAL" ? "active" : ""}
+              onClick={() =>
+                void api.setLiquidityMode("AOTC_PRINCIPAL").then((r) => {
+                  setLiquidityMode(r.mode);
+                  setFlash(`Mode liquidité → ${r.mode}`);
+                })
+              }
+            >
+              AOTC_PRINCIPAL
+            </button>
+          </div>
+
+          <h2>Ticks live</h2>
+          <p className="muted tiny">
+            {ticks.length} ticks · derniers prix simulés
+          </p>
+          <ul className="data-list">
+            {ticks.slice(0, 8).map((t) => (
+              <li key={`${t.asset_id}-${t.ts}`}>
+                <strong>{t.symbol ?? t.asset_id.slice(0, 8)}</strong>
+                <span>
+                  last {xof(t.last)} · mid {xof(t.mid)} · {t.source}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => void api.ticks().then(setTicks)}
+          >
+            Rafraîchir ticks
+          </button>
+
+          <h2>Decision signals</h2>
+          {signals.length === 0 && <p className="muted">Aucun signal pour l’instant.</p>}
+          <ul className="data-list">
+            {signals.slice(0, 10).map((s) => (
+              <li key={s.signal_id}>
+                <div>
+                  <strong>
+                    {s.kind}
+                    {s.actionable ? " · actionable" : ""}
+                  </strong>
+                  <span className="mono">
+                    {s.produced_at.slice(11, 19)}
+                    {s.score !== undefined ? ` · score ${s.score}` : ""}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+
           {partner && (
             <>
               <h2>Partner · {partner.sgi_id}</h2>
