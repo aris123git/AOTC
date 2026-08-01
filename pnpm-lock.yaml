@@ -270,6 +270,15 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@26.1.1)
 
+  packages/auth:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@26.1.1)
+
   packages/contracts:
     dependencies:
       zod:
@@ -305,17 +314,35 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@26.1.1)
 
+  packages/persist:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@26.1.1)
+
   packages/sandbox-platform:
     dependencies:
+      '@aotc/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@aotc/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@aotc/core':
         specifier: workspace:*
         version: link:../core
+      '@aotc/engine-decision':
+        specifier: workspace:*
+        version: link:../../engines/decision
       '@aotc/engine-liquidity':
         specifier: workspace:*
         version: link:../../engines/liquidity
+      '@aotc/engine-market-data':
+        specifier: workspace:*
+        version: link:../../engines/market-data
       '@aotc/engine-monitoring':
         specifier: workspace:*
         version: link:../../engines/monitoring
@@ -343,6 +370,9 @@ importers:
       '@aotc/message-bus':
         specifier: workspace:*
         version: link:../message-bus
+      '@aotc/persist':
+        specifier: workspace:*
+        version: link:../persist
       '@aotc/simulation-journal':
         specifier: workspace:*
         version: link:../simulation-journal

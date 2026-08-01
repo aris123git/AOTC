@@ -63,6 +63,10 @@ export class LiquidityEngine extends BaseEngine {
     return this.mode;
   }
 
+  setMode(mode: "SGI_PARTNER" | "AOTC_PRINCIPAL"): void {
+    this.mode = mode;
+  }
+
   getInventory(assetId: string): number {
     return this.inventory.get(assetId) ?? 0;
   }

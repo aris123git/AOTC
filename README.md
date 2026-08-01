@@ -23,6 +23,7 @@ Avant tout code, six règles d'architecture sont **figées** :
 | [Architecture Fonctionnelle et Métier](./docs/AOTC-Architecture-Fonctionnelle-et-Metier.md) | Flux métier, liquidité, risque |
 | [Interfaces & Contrats](./docs/AOTC-Interfaces-Moteurs-et-Contrats-de-Donnees.md) | Schémas inter-moteurs |
 | [Lot 1 — Scénario E2E](./docs/AOTC-Lot1-Scenario-E2E.md) | Périmètre unique (12 étapes) + discipline PR |
+| [Lot 2 — Plateforme complète](./docs/AOTC-Lot2-Plateforme-Complete.md) | Persist, MFA, moteurs avancés, API v1 |
 
 ## Monorepo
 
@@ -33,6 +34,8 @@ packages/
   message-bus/          # Bus / leadership in-memory
   simulation-journal/   # Chronologie des décisions
   sandbox-platform/     # Session exchange sandbox (orchestration)
+  persist/              # SQLite (node:sqlite) — hors engines
+  auth/                 # OTP / TOTP / API keys
 engines/
   trading/ risk/ pricing/ liquidity/ treasury/
   settlement/ sor/ decision/ monitoring/ partner/ market-data/
@@ -77,3 +80,18 @@ pnpm --filter @aotc/simulation-journal demo
 - Modules éducation
 
 Hors scope production : Mobile Money réel, SGI réelle, flux BRVM réel, Redis/NATS, agrément CREPMF.
+
+## Lot 2 — plateforme complète
+
+Voir [`docs/AOTC-Lot2-Plateforme-Complete.md`](./docs/AOTC-Lot2-Plateforme-Complete.md).
+
+- Persistance SQLite (`@aotc/persist`, `AOTC_DB_PATH`)
+- Auth OTP + TOTP MFA + clés partenaire `aotc_sk_...`
+- Payment intents + webhook sandbox, gouvernance (kill-switch, liquidity mode)
+- Decision / monitoring / pricing / treasury enrichis ; ticks marché simulés
+- API : `/api/auth/*`, `/api/payments/*`, `/api/treasury`, `/api/decision/signals`, `/api/governance`, `/api/v1/*`, `/api/openapi.json`
+
+```bash
+pnpm install && pnpm build && pnpm test
+pnpm --filter @aotc/journal-ui start
+```

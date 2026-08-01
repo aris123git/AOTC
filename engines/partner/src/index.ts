@@ -95,4 +95,9 @@ export class PartnerEngine extends BaseEngine {
       updated_at: new Date().toISOString(),
     };
   }
+
+  /** Snapshots pour toutes les SGI observées. */
+  listAll(period = "sandbox-session"): PartnerStatsUpdated[] {
+    return [...this.bySgi.keys()].map((sgiId) => this.snapshot(sgiId, period));
+  }
 }
