@@ -3,6 +3,9 @@
 -- Coller dans : Supabase → SQL Editor → Run
 -- Montants : entiers minor units XOF (BIGINT)
 -- Auth : profiles.id = auth.users.id
+--
+-- Ordre important : tables sgis/profiles AVANT les fonctions RLS.
+-- Relançable : enums/tables en IF NOT EXISTS / exception handlers.
 -- =============================================================================
 
 -- Extensions
@@ -96,7 +99,35 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- -----------------------------------------------------------------------------
--- Helpers RLS
+-- 1. SGI & profils  (créés AVANT les helpers RLS qui les référencent)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.sgis (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code            TEXT NOT NULL UNIQUE,
+  name            TEXT NOT NULL,
+  commission_bps  INTEGER NOT NULL DEFAULT 10 CHECK (commission_bps >= 0),
+  status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email           TEXT NOT NULL UNIQUE,
+  full_name       TEXT NOT NULL,
+  sgi_id          UUID NOT NULL REFERENCES public.sgis(id),
+  role            public.user_role NOT NULL DEFAULT 'investor',
+  kyc_status      public.kyc_status NOT NULL DEFAULT 'pending',
+  mfa_enabled     BOOLEAN NOT NULL DEFAULT false,
+  phone           TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_sgi ON public.profiles(sgi_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+
+-- -----------------------------------------------------------------------------
+-- Helpers RLS (après public.profiles)
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.current_profile_id()
 RETURNS UUID
@@ -153,34 +184,6 @@ AS $$
       AND role = 'sgi_agent'
   );
 $$;
-
--- -----------------------------------------------------------------------------
--- 1. SGI & profils
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.sgis (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  code            TEXT NOT NULL UNIQUE,
-  name            TEXT NOT NULL,
-  commission_bps  INTEGER NOT NULL DEFAULT 10 CHECK (commission_bps >= 0),
-  status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email           TEXT NOT NULL UNIQUE,
-  full_name       TEXT NOT NULL,
-  sgi_id          UUID NOT NULL REFERENCES public.sgis(id),
-  role            public.user_role NOT NULL DEFAULT 'investor',
-  kyc_status      public.kyc_status NOT NULL DEFAULT 'pending',
-  mfa_enabled     BOOLEAN NOT NULL DEFAULT false,
-  phone           TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_profiles_sgi ON public.profiles(sgi_id);
-CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 
 CREATE TABLE IF NOT EXISTS public.kyc_documents (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
