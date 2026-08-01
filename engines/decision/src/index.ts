@@ -1,7 +1,6 @@
 /**
  * Decision Engine — RÈGLE #6.
- * Interface en place ; implémentation MVP = no-op (observe + aucun signal).
- * Futures : IA, recommandations, prévision liquidité, anomalies, spreads.
+ * Défaut Lot 2 : RuleBasedDecisionEngine (NoOp toujours exporté).
  */
 
 import {
@@ -12,19 +11,20 @@ import {
   type EngineContext,
 } from "@aotc/core";
 import { TOPICS, createEnvelope, DecisionSignalSchema } from "@aotc/contracts";
+import { RuleBasedDecisionEngine } from "./rules.js";
 
 export class DecisionEngine extends BaseEngine {
   readonly name = "decision";
   private readonly port: DecisionEnginePort;
   private unsubs: Array<() => Promise<void>> = [];
+  private lastSignals: DecisionSignal[] = [];
 
-  constructor(port: DecisionEnginePort = new NoOpDecisionEngine()) {
+  constructor(port: DecisionEnginePort = new RuleBasedDecisionEngine()) {
     super();
     this.port = port;
   }
 
   protected async onStart(ctx: EngineContext): Promise<void> {
-    // Observe les faits métier (lecture seule) — aucun couplage vers les producteurs.
     const topics = [
       TOPICS.TRADING_TRADE,
       TOPICS.ORDERS_ACCEPTED,
@@ -50,6 +50,7 @@ export class DecisionEngine extends BaseEngine {
 
   async evaluate(context: Record<string, unknown> = {}): Promise<DecisionSignal[]> {
     const signals = await this.port.evaluate(context);
+    this.lastSignals = signals;
     if (!this.ctx || signals.length === 0) return signals;
 
     for (const signal of signals) {
@@ -69,6 +70,10 @@ export class DecisionEngine extends BaseEngine {
     }
     return signals;
   }
+
+  signals(): DecisionSignal[] {
+    return [...this.lastSignals];
+  }
 }
 
-export { NoOpDecisionEngine };
+export { NoOpDecisionEngine, RuleBasedDecisionEngine };

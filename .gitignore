@@ -11,3 +11,7 @@ coverage
 *.log
 .vercel
 .next
+.data
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

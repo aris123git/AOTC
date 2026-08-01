@@ -12,9 +12,24 @@ export type OrderStatus =
   | "resting"
   | "cancelled";
 
+export type LiquidityMode = "SGI_PARTNER" | "AOTC_PRINCIPAL";
+
+export type GovernanceAction =
+  | "kill_switch"
+  | "set_liquidity_mode"
+  | "change_exposure_limit";
+
+export type PaymentKind = "deposit" | "withdraw";
+export type PaymentStatus = "pending" | "succeeded" | "failed";
+
 export interface SignupInput {
   name: string;
   email: string;
+}
+
+export interface CreatePlatformOpts {
+  /** Active la persistance SQLite sur ce chemin. */
+  dbPath?: string;
 }
 
 export interface UserDto {
@@ -23,6 +38,7 @@ export interface UserDto {
   email: string;
   kyc_status: KycStatus;
   sgi_id: string;
+  mfa_enabled?: boolean;
 }
 
 export interface PlaceOrderInput {
@@ -140,10 +156,105 @@ export interface SessionDto {
   environment: "sandbox";
   user: UserDto | null;
   started_at: string;
+  session_token?: string | null;
 }
 
 export interface PlaceOrderResult {
   order: OrderDto;
   fills: TradeDto[];
   rejected: boolean;
+}
+
+export interface OtpRequestResult {
+  email: string;
+  /** Code exposé uniquement en sandbox pour les démos / tests. */
+  dev_code: string;
+  expires_at: number;
+}
+
+export interface AuthSessionResult {
+  session_token: string;
+  user: UserDto;
+}
+
+export interface MfaSetupResult {
+  secret: string;
+  otpauth_url: string;
+}
+
+export interface PaymentIntentDto {
+  id: string;
+  user_id: string;
+  kind: PaymentKind;
+  amount: number;
+  status: PaymentStatus;
+  idempotency_key: string;
+  created_at: string;
+}
+
+export interface GovernanceProposalDto {
+  id: string;
+  action: GovernanceAction | string;
+  payload: Record<string, unknown>;
+  status: "pending" | "approved" | "rejected";
+  proposed_by: string;
+  approved_by?: string | null;
+  created_at: string;
+}
+
+export interface ApiKeyDto {
+  id: string;
+  name: string;
+  sgi_id: string;
+  created_at: string;
+  revoked_at?: string | null;
+  /** Présent uniquement à la création. */
+  raw_key?: string;
+}
+
+export interface DecisionSignalDto {
+  signal_id: string;
+  kind: string;
+  subject?: {
+    asset_id?: string;
+    instrument_id?: string;
+    sgi_id?: string;
+    user_id?: string;
+  };
+  score?: number;
+  payload: Record<string, unknown>;
+  produced_at: string;
+  actionable: boolean;
+}
+
+export interface TreasurySnapshotDto {
+  available: number;
+  immobilized: number;
+  credit_lines: Array<{ id: string; ceiling: number; drawn: number }>;
+  capital_by_source: {
+    aotc_own: number;
+    coris: number;
+    credit_line: number;
+  };
+  liquidity_revenue: number;
+}
+
+export interface PriceTickDto {
+  asset_id: string;
+  instrument_id?: string;
+  exchange_id?: string;
+  symbol?: string;
+  last: number;
+  mid: number;
+  ts: string;
+  source: string;
+}
+
+export interface SgiClientDto {
+  id: string;
+  name: string;
+  email: string;
+  kyc_status: KycStatus;
+  cash: number;
+  mfa_enabled: boolean;
 }

@@ -18,9 +18,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@aotc/auth": "workspace:*",
     "@aotc/contracts": "workspace:*",
     "@aotc/core": "workspace:*",
     "@aotc/message-bus": "workspace:*",
+    "@aotc/persist": "workspace:*",
     "@aotc/simulation-journal": "workspace:*",
     "@aotc/engine-risk": "workspace:*",
     "@aotc/engine-sor": "workspace:*",
@@ -30,7 +32,9 @@
     "@aotc/engine-treasury": "workspace:*",
     "@aotc/engine-pricing": "workspace:*",
     "@aotc/engine-partner": "workspace:*",
-    "@aotc/engine-monitoring": "workspace:*"
+    "@aotc/engine-monitoring": "workspace:*",
+    "@aotc/engine-decision": "workspace:*",
+    "@aotc/engine-market-data": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
